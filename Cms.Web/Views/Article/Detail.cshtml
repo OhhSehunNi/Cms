@@ -1,0 +1,120 @@
+@model Cms.Application.DTOs.ArticleDto
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>@Model.Title - 新闻网站</title>
+    <meta name="description" content="@Model.SeoDescription">
+    <meta name="keywords" content="@Model.SeoKeywords">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+<body>
+    <header>
+        <nav class="navbar navbar-expand-lg navbar-light bg-light">
+            <div class="container">
+                <a class="navbar-brand" href="/">新闻网站</a>
+                <div class="collapse navbar-collapse">
+                    <ul class="navbar-nav mr-auto">
+                        <li class="nav-item">
+                            <a class="nav-link" href="/">首页</a>
+                        </li>
+                        <!-- 动态加载导航菜单 -->
+                    </ul>
+                    <form class="form-inline my-2 my-lg-0" action="/search" method="get">
+                        <input class="form-control mr-sm-2" type="search" name="keyword" placeholder="搜索" aria-label="Search">
+                        <button class="btn btn-outline-success my-2 my-sm-0" type="submit">搜索</button>
+                    </form>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main class="container mt-4">
+        <div class="row">
+            <div class="col-md-8">
+                <article>
+                    <h1>@Model.Title</h1>
+                    @if (!string.IsNullOrEmpty(Model.SubTitle))
+                    {
+                        <h2>@Model.SubTitle</h2>
+                    }
+                    <div class="meta">
+                        <span>作者：@Model.Author</span> | 
+                        <span>来源：@Model.Source</span> | 
+                        <span>发布时间：@Model.PublishTime.ToString("yyyy-MM-dd HH:mm")</span> | 
+                        <span>浏览量：@Model.ViewCount</span>
+                    </div>
+                    @if (!string.IsNullOrEmpty(Model.CoverImage))
+                    {
+                        <div class="cover-image mt-3">
+                            <img src="@Model.CoverImage" class="img-fluid" alt="@Model.Title">
+                        </div>
+                    }
+                    @if (!string.IsNullOrEmpty(Model.VideoUrl))
+                    {
+                        <div class="video mt-3">
+                            <iframe src="@Model.VideoUrl" class="w-100" height="400" frameborder="0" allowfullscreen></iframe>
+                        </div>
+                    }
+                    <div class="content mt-4">
+                        @Html.Raw(Model.HtmlContent)
+                    </div>
+                    <div class="tags mt-4">
+                        <strong>标签：</strong>
+                        @foreach (var tagName in Model.TagNames)
+                        {
+                            <span class="badge badge-secondary">@tagName</span>
+                        }
+                    </div>
+                </article>
+            </div>
+            <div class="col-md-4">
+                <aside>
+                    <div class="card">
+                        <div class="card-header">
+                            <h5>相关新闻</h5>
+                        </div>
+                        <div class="card-body">
+                            <!-- 动态加载相关新闻 -->
+                            <ul class="list-unstyled">
+                                <li><a href="/article/2">相关新闻1</a></li>
+                                <li><a href="/article/3">相关新闻2</a></li>
+                                <li><a href="/article/4">相关新闻3</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="card mt-4">
+                        <div class="card-header">
+                            <h5>热门阅读</h5>
+                        </div>
+                        <div class="card-body">
+                            <!-- 动态加载热门新闻 -->
+                            <ul class="list-unstyled">
+                                <li><a href="/article/5">热门新闻1</a></li>
+                                <li><a href="/article/6">热门新闻2</a></li>
+                                <li><a href="/article/7">热门新闻3</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </aside>
+            </div>
+        </div>
+    </main>
+
+    <footer class="mt-4 bg-light py-4">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-12 text-center">
+                    <p>&copy; 2026 新闻网站. 保留所有权利.</p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+</html>

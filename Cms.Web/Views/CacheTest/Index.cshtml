@@ -1,0 +1,15 @@
+@{  
+    ViewData["Title"] = "Redis Cache Test";  
+}
+
+<h1>Redis Cache Test</h1>
+
+<div class="alert alert-info">
+    <h3>Cache Value:</h3>
+    <p>@ViewBag.CacheValue</p>
+</div>
+
+<div class="mt-4">
+    <a href="/CacheTest/Index" class="btn btn-primary">Set Cache</a>
+    <a href="/CacheTest/Remove" class="btn btn-danger ml-2">Remove Cache</a>
+</div>
