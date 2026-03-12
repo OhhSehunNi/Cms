@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using Cms.Infrastructure.Data; // ʹ CmsDbContext ���Ϳɼ�
 
 var builder = WebApplication.CreateBuilder(args);
 
