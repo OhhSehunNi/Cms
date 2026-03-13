@@ -13,6 +13,33 @@ USE CmsDb;
 GO
 
 -- =============================================
+-- 0. 站点表 (CmsWebsites)
+-- =============================================
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'CmsWebsites')
+BEGIN
+    CREATE TABLE CmsWebsites (
+        Id INT IDENTITY(1,1) PRIMARY KEY,
+        Name NVARCHAR(200) NOT NULL,
+        Domain NVARCHAR(200) NOT NULL,
+        Logo NVARCHAR(500) NULL,
+        SeoTitle NVARCHAR(200) NULL,
+        SeoDescription NVARCHAR(500) NULL,
+        SeoKeywords NVARCHAR(200) NULL,
+        FooterInfo NVARCHAR(MAX) NULL,
+        IsEnabled BIT NOT NULL DEFAULT 1,
+        CreatedAt DATETIME2 NOT NULL DEFAULT GETDATE(),
+        UpdatedAt DATETIME2 NOT NULL DEFAULT GETDATE(),
+        IsDeleted BIT NOT NULL DEFAULT 0,
+        CONSTRAINT UQ_CmsWebsites_Domain UNIQUE (Domain)
+    );
+    
+    CREATE INDEX IX_CmsWebsites_Domain ON CmsWebsites(Domain);
+    CREATE INDEX IX_CmsWebsites_IsEnabled ON CmsWebsites(IsEnabled);
+    CREATE INDEX IX_CmsWebsites_IsDeleted ON CmsWebsites(IsDeleted);
+END
+GO
+
+-- =============================================
 -- 1. 栏目表 (CmsChannels)
 -- =============================================
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'CmsChannels')
@@ -22,6 +49,7 @@ BEGIN
         Name NVARCHAR(200) NOT NULL,
         Slug NVARCHAR(200) NULL,
         ParentId INT NULL,
+        WebsiteId INT NOT NULL,
         SortOrder INT NOT NULL DEFAULT 0,
         IsShowInNav BIT NOT NULL DEFAULT 0,
         SeoTitle NVARCHAR(200) NULL,
@@ -32,10 +60,12 @@ BEGIN
         CreatedAt DATETIME2 NOT NULL DEFAULT GETDATE(),
         UpdatedAt DATETIME2 NOT NULL DEFAULT GETDATE(),
         IsDeleted BIT NOT NULL DEFAULT 0,
-        CONSTRAINT FK_CmsChannels_Parent FOREIGN KEY (ParentId) REFERENCES CmsChannels(Id)
+        CONSTRAINT FK_CmsChannels_Parent FOREIGN KEY (ParentId) REFERENCES CmsChannels(Id),
+        CONSTRAINT FK_CmsChannels_Website FOREIGN KEY (WebsiteId) REFERENCES CmsWebsites(Id)
     );
     
     CREATE INDEX IX_CmsChannels_ParentId ON CmsChannels(ParentId);
+    CREATE INDEX IX_CmsChannels_WebsiteId ON CmsChannels(WebsiteId);
     CREATE INDEX IX_CmsChannels_Slug ON CmsChannels(Slug);
     CREATE INDEX IX_CmsChannels_IsEnabled ON CmsChannels(IsEnabled);
     CREATE INDEX IX_CmsChannels_IsDeleted ON CmsChannels(IsDeleted);
@@ -55,6 +85,7 @@ BEGIN
         CoverImage NVARCHAR(500) NULL,
         VideoUrl NVARCHAR(500) NULL,
         ChannelId INT NOT NULL,
+        WebsiteId INT NOT NULL,
         Author NVARCHAR(100) NULL,
         Source NVARCHAR(200) NULL,
         PublishTime DATETIME2 NOT NULL DEFAULT GETDATE(),
@@ -71,10 +102,12 @@ BEGIN
         CreatedAt DATETIME2 NOT NULL DEFAULT GETDATE(),
         UpdatedAt DATETIME2 NOT NULL DEFAULT GETDATE(),
         IsDeleted BIT NOT NULL DEFAULT 0,
-        CONSTRAINT FK_CmsArticles_Channel FOREIGN KEY (ChannelId) REFERENCES CmsChannels(Id)
+        CONSTRAINT FK_CmsArticles_Channel FOREIGN KEY (ChannelId) REFERENCES CmsChannels(Id),
+        CONSTRAINT FK_CmsArticles_Website FOREIGN KEY (WebsiteId) REFERENCES CmsWebsites(Id)
     );
     
     CREATE INDEX IX_CmsArticles_ChannelId ON CmsArticles(ChannelId);
+    CREATE INDEX IX_CmsArticles_WebsiteId ON CmsArticles(WebsiteId);
     CREATE INDEX IX_CmsArticles_Status ON CmsArticles(Status);
     CREATE INDEX IX_CmsArticles_IsTop ON CmsArticles(IsTop);
     CREATE INDEX IX_CmsArticles_IsRecommended ON CmsArticles(IsRecommended);
@@ -116,12 +149,15 @@ BEGIN
         Id INT IDENTITY(1,1) PRIMARY KEY,
         Name NVARCHAR(100) NOT NULL,
         Slug NVARCHAR(100) NULL,
+        WebsiteId INT NOT NULL,
         CreatedAt DATETIME2 NOT NULL DEFAULT GETDATE(),
         UpdatedAt DATETIME2 NOT NULL DEFAULT GETDATE(),
-        IsDeleted BIT NOT NULL DEFAULT 0
+        IsDeleted BIT NOT NULL DEFAULT 0,
+        CONSTRAINT FK_CmsTags_Website FOREIGN KEY (WebsiteId) REFERENCES CmsWebsites(Id)
     );
     
     CREATE INDEX IX_CmsTags_Slug ON CmsTags(Slug);
+    CREATE INDEX IX_CmsTags_WebsiteId ON CmsTags(WebsiteId);
     CREATE INDEX IX_CmsTags_IsDeleted ON CmsTags(IsDeleted);
 END
 GO
@@ -162,12 +198,15 @@ BEGIN
         Size BIGINT NOT NULL DEFAULT 0,
         GroupName NVARCHAR(100) NULL,
         Extension NVARCHAR(50) NULL,
+        WebsiteId INT NOT NULL,
         CreatedAt DATETIME2 NOT NULL DEFAULT GETDATE(),
         UpdatedAt DATETIME2 NOT NULL DEFAULT GETDATE(),
-        IsDeleted BIT NOT NULL DEFAULT 0
+        IsDeleted BIT NOT NULL DEFAULT 0,
+        CONSTRAINT FK_CmsMediaAssets_Website FOREIGN KEY (WebsiteId) REFERENCES CmsWebsites(Id)
     );
     
     CREATE INDEX IX_CmsMediaAssets_Group ON CmsMediaAssets(GroupName);
+    CREATE INDEX IX_CmsMediaAssets_WebsiteId ON CmsMediaAssets(WebsiteId);
     CREATE INDEX IX_CmsMediaAssets_IsDeleted ON CmsMediaAssets(IsDeleted);
 END
 GO
@@ -184,13 +223,16 @@ BEGIN
         Type NVARCHAR(50) NULL,
         SortOrder INT NOT NULL DEFAULT 0,
         IsEnabled BIT NOT NULL DEFAULT 1,
+        WebsiteId INT NOT NULL,
         CreatedAt DATETIME2 NOT NULL DEFAULT GETDATE(),
         UpdatedAt DATETIME2 NOT NULL DEFAULT GETDATE(),
         IsDeleted BIT NOT NULL DEFAULT 0,
-        CONSTRAINT UQ_CmsRecommendSlots_Code UNIQUE (Code)
+        CONSTRAINT UQ_CmsRecommendSlots_Code UNIQUE (Code),
+        CONSTRAINT FK_CmsRecommendSlots_Website FOREIGN KEY (WebsiteId) REFERENCES CmsWebsites(Id)
     );
     
     CREATE INDEX IX_CmsRecommendSlots_Code ON CmsRecommendSlots(Code);
+    CREATE INDEX IX_CmsRecommendSlots_WebsiteId ON CmsRecommendSlots(WebsiteId);
     CREATE INDEX IX_CmsRecommendSlots_IsEnabled ON CmsRecommendSlots(IsEnabled);
     CREATE INDEX IX_CmsRecommendSlots_IsDeleted ON CmsRecommendSlots(IsDeleted);
 END
@@ -362,6 +404,14 @@ GO
 -- 插入初始数据
 -- =============================================
 
+-- 插入默认站点
+IF NOT EXISTS (SELECT * FROM CmsWebsites WHERE Domain = N'localhost')
+BEGIN
+    INSERT INTO CmsWebsites (Name, Domain, Logo, SeoTitle, SeoDescription, SeoKeywords, FooterInfo, IsEnabled) VALUES 
+    (N'默认站点', N'localhost', NULL, N'默认站点 - 新闻网站', N'这是默认站点的描述', N'新闻,资讯', N'© 2026 新闻网站. 保留所有权利.', 1);
+END
+GO
+
 -- 插入默认角色
 IF NOT EXISTS (SELECT * FROM CmsRoles WHERE Name = N'超级管理员')
 BEGIN
@@ -404,23 +454,43 @@ BEGIN
 END
 GO
 
+-- 插入默认栏目
+IF NOT EXISTS (SELECT * FROM CmsChannels WHERE Name = N'首页')
+BEGIN
+    INSERT INTO CmsChannels (Name, Slug, ParentId, WebsiteId, SortOrder, IsShowInNav, IsEnabled) VALUES 
+    (N'首页', 'home', NULL, 1, 1, 1, 1);
+END
+
+IF NOT EXISTS (SELECT * FROM CmsChannels WHERE Name = N'新闻')
+BEGIN
+    INSERT INTO CmsChannels (Name, Slug, ParentId, WebsiteId, SortOrder, IsShowInNav, IsEnabled) VALUES 
+    (N'新闻', 'news', NULL, 1, 2, 1, 1);
+END
+
+IF NOT EXISTS (SELECT * FROM CmsChannels WHERE Name = N'体育')
+BEGIN
+    INSERT INTO CmsChannels (Name, Slug, ParentId, WebsiteId, SortOrder, IsShowInNav, IsEnabled) VALUES 
+    (N'体育', 'sports', NULL, 1, 3, 1, 1);
+END
+GO
+
 -- 插入默认推荐位
 IF NOT EXISTS (SELECT * FROM CmsRecommendSlots WHERE Code = 'homepage_carousel')
 BEGIN
-    INSERT INTO CmsRecommendSlots (Name, Code, Type, SortOrder, IsEnabled) VALUES 
-    (N'首页焦点轮播', 'homepage_carousel', 'Carousel', 1, 1);
+    INSERT INTO CmsRecommendSlots (Name, Code, Type, SortOrder, IsEnabled, WebsiteId) VALUES 
+    (N'首页焦点轮播', 'homepage_carousel', 'Carousel', 1, 1, 1);
 END
 
 IF NOT EXISTS (SELECT * FROM CmsRecommendSlots WHERE Code = 'homepage_headline')
 BEGIN
-    INSERT INTO CmsRecommendSlots (Name, Code, Type, SortOrder, IsEnabled) VALUES 
-    (N'首页头条', 'homepage_headline', 'Headline', 2, 1);
+    INSERT INTO CmsRecommendSlots (Name, Code, Type, SortOrder, IsEnabled, WebsiteId) VALUES 
+    (N'首页头条', 'homepage_headline', 'Headline', 2, 1, 1);
 END
 
 IF NOT EXISTS (SELECT * FROM CmsRecommendSlots WHERE Code = 'homepage_recommended')
 BEGIN
-    INSERT INTO CmsRecommendSlots (Name, Code, Type, SortOrder, IsEnabled) VALUES 
-    (N'首页推荐', 'homepage_recommended', 'Recommended', 3, 1);
+    INSERT INTO CmsRecommendSlots (Name, Code, Type, SortOrder, IsEnabled, WebsiteId) VALUES 
+    (N'首页推荐', 'homepage_recommended', 'Recommended', 3, 1, 1);
 END
 GO
 

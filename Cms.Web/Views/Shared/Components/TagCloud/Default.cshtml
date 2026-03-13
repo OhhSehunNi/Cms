@@ -1,0 +1,11 @@
+@model List<Cms.Web.ViewModels.TagViewModel>
+
+<h3>标签云</h3>
+<div class="tag-cloud">
+    @foreach (var tag in Model)
+    {
+        <a href="/tag/@tag.TagSlug">
+            @tag.TagName (@tag.TotalCount)
+        </a>
+    }
+</div>

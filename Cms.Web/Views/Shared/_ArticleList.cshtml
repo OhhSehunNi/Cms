@@ -1,0 +1,44 @@
+@model IEnumerable<Cms.Web.ViewModels.ArticleListItemViewModel>
+
+@foreach (var article in Model)
+{
+    <article class="list-card">
+        @if (!string.IsNullOrEmpty(article.CoverImage))
+        {
+            <a class="list-card__thumb"
+               asp-controller="Article" asp-action="Detail"
+               asp-route-channelSlug="@article.ChannelSlug"
+               asp-route-year="@article.PublishTime.Year"
+               asp-route-month="@article.PublishTime.Month"
+               asp-route-day="@article.PublishTime.Day"
+               asp-route-id="@article.Id">
+                <img src="@article.CoverImage" alt="@article.Title" loading="lazy" decoding="async" />
+            </a>
+        }
+        <div class="list-card__body">
+            <h3 class="list-card__title">
+                <a asp-controller="Article" asp-action="Detail"
+                   asp-route-channelSlug="@article.ChannelSlug"
+                   asp-route-year="@article.PublishTime.Year"
+                   asp-route-month="@article.PublishTime.Month"
+                   asp-route-day="@article.PublishTime.Day"
+                   asp-route-id="@article.Id">
+                    @article.Title
+                </a>
+            </h3>
+            @if (!string.IsNullOrWhiteSpace(article.Summary))
+            {
+                <p class="list-card__summary">@article.Summary</p>
+            }
+            <div class="list-card__meta">
+                <span class="list-card__pill">@article.ChannelName</span>
+                <span>@article.PublishTime.ToString("yyyy-MM-dd HH:mm")</span>
+                @if (!string.IsNullOrWhiteSpace(article.Author))
+                {
+                    <span>· @article.Author</span>
+                }
+                <span>· 浏览 @article.ViewCount</span>
+            </div>
+        </div>
+    </article>
+}

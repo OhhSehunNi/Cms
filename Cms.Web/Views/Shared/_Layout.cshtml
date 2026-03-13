@@ -1,50 +1,74 @@
-﻿<!DOCTYPE html>
-<html lang="en">
+<!DOCTYPE html>
+<html lang="zh-CN">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - Cms.Web</title>
-    <script type="importmap"></script>
+    <title>@ViewData["Title"]</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
-    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/Cms.Web.styles.css" asp-append-version="true" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" />
+    @await Html.PartialAsync("_SeoMeta")
 </head>
-<body>
-    <header>
-        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
-            <div class="container-fluid">
-                <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">Cms.Web</a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
-                        aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
-                    <ul class="navbar-nav flex-grow-1">
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
-                        </li>
-                    </ul>
+<body class="layout">
+    <a class="skip-link" href="#main">跳到正文</a>
+
+    <header class="header">
+        <!-- 顶部工具条：登录 / 手机 / 导航 -->
+        <div class="topbar">
+            <div class="container-xl d-flex justify-content-between align-items-center">
+                <div class="topbar-left">
+                    <a href="/" class="topbar-link">首页</a>
+                    <a href="#" class="topbar-link">设为首页</a>
+                    <a href="#" class="topbar-link">手机站</a>
+                    <a href="#" class="topbar-link">移动客户端</a>
+                </div>
+                <div class="topbar-right">
+                    <span class="topbar-text">欢迎您，游客</span>
+                    <a href="#" class="topbar-link">登录</a>
+                    <a href="#" class="topbar-link">注册</a>
+                    <a href="#" class="topbar-link">微博</a>
+                    <a href="#" class="topbar-link">邮箱</a>
+                    <a href="#" class="topbar-link">网站导航</a>
                 </div>
             </div>
-        </nav>
-    </header>
-    <div class="container">
-        <main role="main" class="pb-3">
-            @RenderBody()
-        </main>
-    </div>
-
-    <footer class="border-top footer text-muted">
-        <div class="container">
-            &copy; 2026 - Cms.Web - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
         </div>
+
+        <!-- 站点主导航（Logo + 搜索等），复用现有 Header 部分 -->
+        @await Html.PartialAsync("_Header")
+
+        <!-- 频道导航条：新闻 / 科技 / 财经等 -->
+        <div class="channel-nav">
+            <div class="container-xl">
+                @* 这里简单写死一行主频道导航，后续可替换为动态栏目 *@
+                <nav class="channel-nav-inner" aria-label="主频道导航">
+                    <a href="/" class="channel-nav-link">首页</a>
+                    <a href="/news" class="channel-nav-link">新闻</a>
+                    <a href="/tech" class="channel-nav-link">科技</a>
+                    <a href="/finance" class="channel-nav-link">财经</a>
+                    <a href="/sports" class="channel-nav-link">体育</a>
+                    <a href="/ent" class="channel-nav-link">娱乐</a>
+                    <a href="/auto" class="channel-nav-link">汽车</a>
+                    <a href="/edu" class="channel-nav-link">教育</a>
+                    <a href="/house" class="channel-nav-link">房产</a>
+                    <a href="/game" class="channel-nav-link">游戏</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <main id="main" class="main-content">
+        <div class="container-xl content-container page-main">
+            @RenderBody()
+        </div>
+    </main>
+
+    <footer class="footer mt-4">
+        @await Html.PartialAsync("_Footer")
     </footer>
+
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="~/js/site.js" asp-append-version="true"></script>
-    @await RenderSectionAsync("Scripts", required: false)
+    <script src="~/js/site.js"></script>
+    @RenderSection("Scripts", required: false)
 </body>
 </html>

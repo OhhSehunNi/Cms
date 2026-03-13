@@ -5,15 +5,27 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cms.Application.Services
 {
+    /// <summary>
+    /// 推荐服务实现类，用于推荐位相关的业务逻辑
+    /// </summary>
     public class RecommendService : IRecommendService
     {
         private readonly CmsDbContext _dbContext;
 
+        /// <summary>
+        /// 构造函数
+        /// </summary>
+        /// <param name="dbContext">数据库上下文</param>
         public RecommendService(CmsDbContext dbContext)
         {
             _dbContext = dbContext;
         }
 
+        /// <summary>
+        /// 根据 ID 获取推荐位
+        /// </summary>
+        /// <param name="id">推荐位 ID</param>
+        /// <returns>推荐位 DTO</returns>
         public async Task<RecommendSlotDto> GetSlotByIdAsync(int id)
         {
             var slot = await _dbContext.CmsRecommendSlots
@@ -27,6 +39,11 @@ namespace Cms.Application.Services
             return MapSlotToDto(slot);
         }
 
+        /// <summary>
+        /// 根据代码获取推荐位
+        /// </summary>
+        /// <param name="code">推荐位代码</param>
+        /// <returns>推荐位 DTO</returns>
         public async Task<RecommendSlotDto> GetSlotByCodeAsync(string code)
         {
             var slot = await _dbContext.CmsRecommendSlots
@@ -40,6 +57,13 @@ namespace Cms.Application.Services
             return MapSlotToDto(slot);
         }
 
+        /// <summary>
+        /// 获取推荐位列表
+        /// </summary>
+        /// <param name="page">页码</param>
+        /// <param name="pageSize">每页大小</param>
+        /// <param name="keyword">关键词</param>
+        /// <returns>推荐位 DTO 列表</returns>
         public async Task<List<RecommendSlotDto>> GetSlotListAsync(int page, int pageSize, string keyword = null)
         {
             var query = _dbContext.CmsRecommendSlots.AsQueryable();
@@ -58,6 +82,11 @@ namespace Cms.Application.Services
             return slots.Select(MapSlotToDto).ToList();
         }
 
+        /// <summary>
+        /// 创建推荐位
+        /// </summary>
+        /// <param name="slotDto">推荐位 DTO</param>
+        /// <returns>创建后的推荐位 DTO</returns>
         public async Task<RecommendSlotDto> CreateSlotAsync(RecommendSlotDto slotDto)
         {
             var slot = MapSlotToEntity(slotDto);
@@ -70,6 +99,11 @@ namespace Cms.Application.Services
             return await GetSlotByIdAsync(slot.Id);
         }
 
+        /// <summary>
+        /// 更新推荐位
+        /// </summary>
+        /// <param name="slotDto">推荐位 DTO</param>
+        /// <returns>更新后的推荐位 DTO</returns>
         public async Task<RecommendSlotDto> UpdateSlotAsync(RecommendSlotDto slotDto)
         {
             var slot = await _dbContext.CmsRecommendSlots.FindAsync(slotDto.Id);
@@ -84,6 +118,11 @@ namespace Cms.Application.Services
             return await GetSlotByIdAsync(slot.Id);
         }
 
+        /// <summary>
+        /// 删除推荐位
+        /// </summary>
+        /// <param name="id">推荐位 ID</param>
+        /// <returns></returns>
         public async Task DeleteSlotAsync(int id)
         {
             var slot = await _dbContext.CmsRecommendSlots.FindAsync(id);
@@ -94,6 +133,11 @@ namespace Cms.Application.Services
             }
         }
 
+        /// <summary>
+        /// 添加推荐位项目
+        /// </summary>
+        /// <param name="itemDto">推荐位项目 DTO</param>
+        /// <returns>添加后的推荐位项目 DTO</returns>
         public async Task<RecommendItemDto> AddItemAsync(RecommendItemDto itemDto)
         {
             var item = MapItemToEntity(itemDto);
@@ -106,6 +150,11 @@ namespace Cms.Application.Services
             return await GetItemByIdAsync(item.Id);
         }
 
+        /// <summary>
+        /// 更新推荐位项目
+        /// </summary>
+        /// <param name="itemDto">推荐位项目 DTO</param>
+        /// <returns>更新后的推荐位项目 DTO</returns>
         public async Task<RecommendItemDto> UpdateItemAsync(RecommendItemDto itemDto)
         {
             var item = await _dbContext.CmsRecommendItems.FindAsync(itemDto.Id);
@@ -120,6 +169,11 @@ namespace Cms.Application.Services
             return await GetItemByIdAsync(item.Id);
         }
 
+        /// <summary>
+        /// 删除推荐位项目
+        /// </summary>
+        /// <param name="id">推荐位项目 ID</param>
+        /// <returns></returns>
         public async Task DeleteItemAsync(int id)
         {
             var item = await _dbContext.CmsRecommendItems.FindAsync(id);
@@ -130,6 +184,12 @@ namespace Cms.Application.Services
             }
         }
 
+        /// <summary>
+        /// 获取推荐文章
+        /// </summary>
+        /// <param name="code">推荐位代码</param>
+        /// <param name="count">数量限制</param>
+        /// <returns>文章 DTO 列表</returns>
         public async Task<List<ArticleDto>> GetRecommendArticlesAsync(string code, int count = 10)
         {
             var slot = await _dbContext.CmsRecommendSlots
@@ -152,6 +212,11 @@ namespace Cms.Application.Services
             return items.Select(MapArticleToDto).ToList();
         }
 
+        /// <summary>
+        /// 根据 ID 获取推荐位项目
+        /// </summary>
+        /// <param name="id">推荐位项目 ID</param>
+        /// <returns>推荐位项目 DTO</returns>
         private async Task<RecommendItemDto> GetItemByIdAsync(int id)
         {
             var item = await _dbContext.CmsRecommendItems
@@ -164,6 +229,11 @@ namespace Cms.Application.Services
             return MapItemToDto(item);
         }
 
+        /// <summary>
+        /// 将推荐位实体映射为 DTO
+        /// </summary>
+        /// <param name="slot">推荐位实体</param>
+        /// <returns>推荐位 DTO</returns>
         private RecommendSlotDto MapSlotToDto(CmsRecommendSlot slot)
         {
             return new RecommendSlotDto
@@ -178,6 +248,11 @@ namespace Cms.Application.Services
             };
         }
 
+        /// <summary>
+        /// 将推荐位 DTO 映射为实体
+        /// </summary>
+        /// <param name="slotDto">推荐位 DTO</param>
+        /// <returns>推荐位实体</returns>
         private CmsRecommendSlot MapSlotToEntity(RecommendSlotDto slotDto)
         {
             return new CmsRecommendSlot
@@ -190,6 +265,11 @@ namespace Cms.Application.Services
             };
         }
 
+        /// <summary>
+        /// 从推荐位 DTO 更新实体
+        /// </summary>
+        /// <param name="slot">推荐位实体</param>
+        /// <param name="slotDto">推荐位 DTO</param>
         private void UpdateSlotEntityFromDto(CmsRecommendSlot slot, RecommendSlotDto slotDto)
         {
             slot.Name = slotDto.Name;
@@ -199,6 +279,11 @@ namespace Cms.Application.Services
             slot.IsEnabled = slotDto.IsEnabled;
         }
 
+        /// <summary>
+        /// 将推荐位项目实体映射为 DTO
+        /// </summary>
+        /// <param name="item">推荐位项目实体</param>
+        /// <returns>推荐位项目 DTO</returns>
         private RecommendItemDto MapItemToDto(CmsRecommendItem item)
         {
             return new RecommendItemDto
@@ -214,6 +299,11 @@ namespace Cms.Application.Services
             };
         }
 
+        /// <summary>
+        /// 将推荐位项目 DTO 映射为实体
+        /// </summary>
+        /// <param name="itemDto">推荐位项目 DTO</param>
+        /// <returns>推荐位项目实体</returns>
         private CmsRecommendItem MapItemToEntity(RecommendItemDto itemDto)
         {
             return new CmsRecommendItem
@@ -226,6 +316,11 @@ namespace Cms.Application.Services
             };
         }
 
+        /// <summary>
+        /// 从推荐位项目 DTO 更新实体
+        /// </summary>
+        /// <param name="item">推荐位项目实体</param>
+        /// <param name="itemDto">推荐位项目 DTO</param>
         private void UpdateItemEntityFromDto(CmsRecommendItem item, RecommendItemDto itemDto)
         {
             item.SlotId = itemDto.SlotId;
@@ -235,6 +330,11 @@ namespace Cms.Application.Services
             item.EndTime = itemDto.EndTime;
         }
 
+        /// <summary>
+        /// 将文章实体映射为 DTO
+        /// </summary>
+        /// <param name="article">文章实体</param>
+        /// <returns>文章 DTO</returns>
         private ArticleDto MapArticleToDto(CmsArticle article)
         {
             return new ArticleDto

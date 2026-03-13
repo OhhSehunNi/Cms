@@ -1,0 +1,60 @@
+@model Cms.Web.ViewModels.SearchViewModel
+
+@{
+    ViewData["Title"] = Model.SeoTitle;
+    ViewData["SeoTitle"] = Model.SeoTitle;
+    ViewData["SeoDescription"] = Model.SeoDescription;
+    ViewData["SeoKeywords"] = Model.SeoKeywords;
+}
+
+<!-- 面包屑导航 -->
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="/">首页</a></li>
+        <li class="breadcrumb-item active" aria-current="page">搜索</li>
+    </ol>
+</nav>
+
+<!-- 搜索盒（按设计规范 search-box + search-results-header） -->
+<div class="search-box mb-4">
+    <form asp-controller="Search" asp-action="Index" method="get" class="search-box__form">
+        <input type="text"
+               name="keyword"
+               value="@Model.Keyword"
+               placeholder="搜索文章、标签或作者..."
+               class="search-box__input" />
+        <button type="submit" class="button search-box__button">搜索</button>
+    </form>
+</div>
+
+<div class="search-results mb-4">
+    <div class="result-header">
+        <h3>找到 <span>@Model.TotalCount</span> 条相关结果</h3>
+        <div class="result-filters">
+            <button type="button" class="filter-btn active">全部</button>
+            <button type="button" class="filter-btn">文章</button>
+            <button type="button" class="filter-btn">标签</button>
+            <button type="button" class="filter-btn">作者</button>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- 主内容区 -->
+    <div class="col-lg-8">
+        @await Html.PartialAsync("_ArticleList", Model.Articles)
+
+        <div class="mt-4">
+            @await Html.PartialAsync("_Pagination", Model)
+        </div>
+    </div>
+
+    <!-- 侧边栏 -->
+    <div class="col-lg-4">
+        @await Component.InvokeAsync("HotArticles")
+
+        <div class="mt-4">
+            @await Component.InvokeAsync("TagCloud")
+        </div>
+    </div>
+</div>

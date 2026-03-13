@@ -1,0 +1,14 @@
+@model List<Cms.Web.ViewModels.ArticleListItemViewModel>
+
+<h3>热门文章</h3>
+<ul class="hot-articles">
+    @foreach (var article in Model)
+    {
+        <li>
+            <a href="@(string.Format("/{0}/{1}/{2}/{3}/{4}.html", article.ChannelSlug, article.PublishTime.Year, article.PublishTime.Month, article.PublishTime.Day, article.Id))">
+                @article.Title
+            </a>
+            <span class="text-muted float-end">@article.ViewCount</span>
+        </li>
+    }
+</ul>

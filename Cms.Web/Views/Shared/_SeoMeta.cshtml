@@ -1,0 +1,35 @@
+@model dynamic
+
+@{
+    var title = (ViewData["SeoTitle"] ?? ViewData["Title"])?.ToString();
+    var desc = ViewData["SeoDescription"]?.ToString();
+    var keywords = ViewData["SeoKeywords"]?.ToString();
+    var canonical = ViewData["CanonicalUrl"]?.ToString();
+
+    // 兜底 canonical：避免 SEO 里出现多条同内容 URL
+    if (string.IsNullOrWhiteSpace(canonical))
+    {
+        canonical = $"{Context.Request.Scheme}://{Context.Request.Host}{Context.Request.Path}";
+    }
+}
+
+@if (!string.IsNullOrWhiteSpace(title))
+{
+    <meta name="title" content="@title" />
+    <title>@title</title>
+}
+
+@if (!string.IsNullOrWhiteSpace(desc))
+{
+    <meta name="description" content="@desc" />
+}
+
+@if (!string.IsNullOrWhiteSpace(keywords))
+{
+    <meta name="keywords" content="@keywords" />
+}
+
+@if (!string.IsNullOrWhiteSpace(canonical))
+{
+    <link rel="canonical" href="@canonical" />
+}

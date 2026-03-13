@@ -1,0 +1,43 @@
+@model List<Cms.Web.ViewModels.ArticleListItemViewModel>
+
+<section class="recommend-section">
+    <div class="section-header">
+        <h3>为你推荐</h3>
+        <a href="javascript:void(0)" class="view-more">换一批</a>
+    </div>
+    <div class="recommend-cards">
+        @foreach (var article in Model)
+        {
+            <article class="recommend-card">
+                @if (!string.IsNullOrEmpty(article.CoverImage))
+                {
+                    <a class="recommend-card__thumb"
+                       href="@(string.Format("/{0}/{1}/{2}/{3}/{4}.html",
+                                article.ChannelSlug,
+                                article.PublishTime.Year,
+                                article.PublishTime.Month,
+                                article.PublishTime.Day,
+                                article.Id))">
+                        <img src="@article.CoverImage" alt="@article.Title" loading="lazy" decoding="async" />
+                    </a>
+                }
+                <div class="recommend-card__body">
+                    <h4 class="recommend-card__title">
+                        <a href="@(string.Format("/{0}/{1}/{2}/{3}/{4}.html",
+                                    article.ChannelSlug,
+                                    article.PublishTime.Year,
+                                    article.PublishTime.Month,
+                                    article.PublishTime.Day,
+                                    article.Id))">
+                            @article.Title
+                        </a>
+                    </h4>
+                    <div class="recommend-card__meta">
+                        <span>@article.ChannelName</span>
+                        <span>· @article.PublishTime.ToString("MM-dd HH:mm")</span>
+                    </div>
+                </div>
+            </article>
+        }
+    </div>
+</section>

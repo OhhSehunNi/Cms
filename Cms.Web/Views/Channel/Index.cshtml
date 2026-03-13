@@ -1,0 +1,49 @@
+@model Cms.Web.ViewModels.ChannelViewModel
+
+@{
+    ViewData["Title"] = Model.SeoTitle;
+    ViewData["SeoTitle"] = Model.SeoTitle;
+    ViewData["SeoDescription"] = Model.SeoDescription;
+    ViewData["SeoKeywords"] = Model.SeoKeywords;
+}
+
+<!-- 面包屑导航 -->
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="/">首页</a></li>
+        <li class="breadcrumb-item active" aria-current="page">@Model.ChannelName</li>
+    </ol>
+</nav>
+
+<!-- 栏目信息 -->
+<div class="mb-4">
+    <h1>@Model.ChannelName</h1>
+    @if (!string.IsNullOrEmpty(Model.Description))
+    {
+        <p class="text-muted">@Model.Description</p>
+    }
+</div>
+
+<div class="row">
+    <!-- 主内容区 -->
+    <div class="col-lg-8">
+        <!-- 文章列表 -->
+        @await Html.PartialAsync("_ArticleList", Model.Articles)
+        
+        <!-- 分页 -->
+        <div class="mt-4">
+            @await Html.PartialAsync("_Pagination", Model)
+        </div>
+    </div>
+
+    <!-- 侧边栏 -->
+    <div class="col-lg-4">
+        <!-- 热门文章 -->
+        @await Component.InvokeAsync("HotArticles")
+        
+        <!-- 标签云 -->
+        <div class="mt-4">
+            @await Component.InvokeAsync("TagCloud")
+        </div>
+    </div>
+</div>

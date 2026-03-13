@@ -5,15 +5,27 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cms.Application.Services
 {
+    /// <summary>
+    /// 栏目服务实现类，用于栏目相关的业务逻辑
+    /// </summary>
     public class ChannelService : IChannelService
     {
         private readonly CmsDbContext _dbContext;
 
+        /// <summary>
+        /// 构造函数
+        /// </summary>
+        /// <param name="dbContext">数据库上下文</param>
         public ChannelService(CmsDbContext dbContext)
         {
             _dbContext = dbContext;
         }
 
+        /// <summary>
+        /// 根据 ID 获取栏目
+        /// </summary>
+        /// <param name="id">栏目 ID</param>
+        /// <returns>栏目 DTO</returns>
         public async Task<ChannelDto> GetByIdAsync(int id)
         {
             var channel = await _dbContext.CmsChannels
@@ -27,6 +39,10 @@ namespace Cms.Application.Services
             return MapToDto(channel);
         }
 
+        /// <summary>
+        /// 获取栏目树
+        /// </summary>
+        /// <returns>栏目 DTO 列表</returns>
         public async Task<List<ChannelDto>> GetTreeAsync()
         {
             var channels = await _dbContext.CmsChannels
@@ -38,6 +54,13 @@ namespace Cms.Application.Services
             return rootChannels.Select(MapToDto).ToList();
         }
 
+        /// <summary>
+        /// 获取栏目列表
+        /// </summary>
+        /// <param name="page">页码</param>
+        /// <param name="pageSize">每页大小</param>
+        /// <param name="keyword">关键词</param>
+        /// <returns>栏目 DTO 列表</returns>
         public async Task<List<ChannelDto>> GetListAsync(int page, int pageSize, string keyword = null)
         {
             IQueryable<CmsChannel> query = _dbContext.CmsChannels
@@ -57,6 +80,11 @@ namespace Cms.Application.Services
             return channels.Select(MapToDto).ToList();
         }
 
+        /// <summary>
+        /// 创建栏目
+        /// </summary>
+        /// <param name="channelDto">栏目 DTO</param>
+        /// <returns>创建后的栏目 DTO</returns>
         public async Task<ChannelDto> CreateAsync(ChannelDto channelDto)
         {
             var channel = MapToEntity(channelDto);
@@ -69,6 +97,11 @@ namespace Cms.Application.Services
             return await GetByIdAsync(channel.Id);
         }
 
+        /// <summary>
+        /// 更新栏目
+        /// </summary>
+        /// <param name="channelDto">栏目 DTO</param>
+        /// <returns>更新后的栏目 DTO</returns>
         public async Task<ChannelDto> UpdateAsync(ChannelDto channelDto)
         {
             var channel = await _dbContext.CmsChannels.FindAsync(channelDto.Id);
@@ -83,6 +116,11 @@ namespace Cms.Application.Services
             return await GetByIdAsync(channel.Id);
         }
 
+        /// <summary>
+        /// 删除栏目
+        /// </summary>
+        /// <param name="id">栏目 ID</param>
+        /// <returns></returns>
         public async Task DeleteAsync(int id)
         {
             var channel = await _dbContext.CmsChannels.FindAsync(id);
@@ -93,11 +131,16 @@ namespace Cms.Application.Services
             }
         }
 
-        public async Task<List<ChannelDto>> GetNavigationChannelsAsync()
+        /// <summary>
+        /// 获取导航栏目
+        /// </summary>
+        /// <param name="websiteId">网站 ID</param>
+        /// <returns>栏目 DTO 列表</returns>
+        public async Task<List<ChannelDto>> GetNavigationChannelsAsync(int websiteId)
         {
             var channels = await _dbContext.CmsChannels
                 .Include(c => c.Children)
-                .Where(c => c.IsShowInNav && c.IsEnabled && !c.IsDeleted)
+                .Where(c => c.WebsiteId == websiteId && c.IsShowInNav && c.IsEnabled && !c.IsDeleted)
                 .OrderBy(c => c.SortOrder)
                 .ToListAsync();
 
@@ -105,6 +148,11 @@ namespace Cms.Application.Services
             return rootChannels.Select(MapToDto).ToList();
         }
 
+        /// <summary>
+        /// 将实体映射为 DTO
+        /// </summary>
+        /// <param name="channel">栏目实体</param>
+        /// <returns>栏目 DTO</returns>
         private ChannelDto MapToDto(CmsChannel channel)
         {
             return new ChannelDto
@@ -125,6 +173,11 @@ namespace Cms.Application.Services
             };
         }
 
+        /// <summary>
+        /// 将 DTO 映射为实体
+        /// </summary>
+        /// <param name="channelDto">栏目 DTO</param>
+        /// <returns>栏目实体</returns>
         private CmsChannel MapToEntity(ChannelDto channelDto)
         {
             return new CmsChannel
@@ -142,6 +195,11 @@ namespace Cms.Application.Services
             };
         }
 
+        /// <summary>
+        /// 从 DTO 更新实体
+        /// </summary>
+        /// <param name="channel">栏目实体</param>
+        /// <param name="channelDto">栏目 DTO</param>
         private void UpdateEntityFromDto(CmsChannel channel, ChannelDto channelDto)
         {
             channel.Name = channelDto.Name;
