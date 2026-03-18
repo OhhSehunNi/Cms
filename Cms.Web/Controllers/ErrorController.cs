@@ -3,15 +3,30 @@ using Cms.Application.Services;
 
 namespace Cms.Web.Controllers
 {
+    /// <summary>
+    /// 错误控制器
+    /// 处理网站错误页面的展示
+    /// </summary>
     public class ErrorController : Controller
     {
+        /// <summary>
+        /// 网站服务接口
+        /// </summary>
         private readonly IWebsiteService _websiteService;
 
+        /// <summary>
+        /// 构造函数
+        /// </summary>
+        /// <param name="websiteService">网站服务实例</param>
         public ErrorController(IWebsiteService websiteService)
         {
             _websiteService = websiteService;
         }
 
+        /// <summary>
+        /// 404错误页面
+        /// </summary>
+        /// <returns>404错误视图</returns>
         [Route("error/404")]
         public async Task<IActionResult> NotFoundPage()
         {

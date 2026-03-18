@@ -377,6 +377,28 @@ END
 GO
 
 -- =============================================
+-- 13.5. 角色栏目关联表 (CmsRoleChannels)
+-- =============================================
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'CmsRoleChannels')
+BEGIN
+    CREATE TABLE CmsRoleChannels (
+        Id INT IDENTITY(1,1) PRIMARY KEY,
+        RoleId INT NOT NULL,
+        ChannelId INT NOT NULL,
+        CreatedAt DATETIME2 NOT NULL DEFAULT GETDATE(),
+        UpdatedAt DATETIME2 NOT NULL DEFAULT GETDATE(),
+        IsDeleted BIT NOT NULL DEFAULT 0,
+        CONSTRAINT FK_CmsRoleChannels_Role FOREIGN KEY (RoleId) REFERENCES CmsRoles(Id),
+        CONSTRAINT FK_CmsRoleChannels_Channel FOREIGN KEY (ChannelId) REFERENCES CmsChannels(Id),
+        CONSTRAINT UQ_CmsRoleChannels_Role_Channel UNIQUE (RoleId, ChannelId)
+    );
+    
+    CREATE INDEX IX_CmsRoleChannels_RoleId ON CmsRoleChannels(RoleId);
+    CREATE INDEX IX_CmsRoleChannels_ChannelId ON CmsRoleChannels(ChannelId);
+END
+GO
+
+-- =============================================
 -- 14. 操作日志表 (CmsOperationLogs)
 -- =============================================
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'CmsOperationLogs')
@@ -397,6 +419,32 @@ BEGIN
     CREATE INDEX IX_CmsOperationLogs_UserId ON CmsOperationLogs(UserId);
     CREATE INDEX IX_CmsOperationLogs_OperationType ON CmsOperationLogs(OperationType);
     CREATE INDEX IX_CmsOperationLogs_CreatedAt ON CmsOperationLogs(CreatedAt);
+END
+GO
+
+-- =============================================
+-- 15. 登录日志表 (CmsLoginLogs)
+-- =============================================
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'CmsLoginLogs')
+BEGIN
+    CREATE TABLE CmsLoginLogs (
+        Id INT IDENTITY(1,1) PRIMARY KEY,
+        UserId INT NULL,
+        Username NVARCHAR(100) NOT NULL,
+        Ip NVARCHAR(50) NULL,
+        UserAgent NVARCHAR(500) NULL,
+        Status BIT NOT NULL DEFAULT 0,
+        Message NVARCHAR(500) NULL,
+        CreatedAt DATETIME2 NOT NULL DEFAULT GETDATE(),
+        UpdatedAt DATETIME2 NOT NULL DEFAULT GETDATE(),
+        IsDeleted BIT NOT NULL DEFAULT 0,
+        CONSTRAINT FK_CmsLoginLogs_User FOREIGN KEY (UserId) REFERENCES CmsUsers(Id)
+    );
+    
+    CREATE INDEX IX_CmsLoginLogs_UserId ON CmsLoginLogs(UserId);
+    CREATE INDEX IX_CmsLoginLogs_Username ON CmsLoginLogs(Username);
+    CREATE INDEX IX_CmsLoginLogs_Status ON CmsLoginLogs(Status);
+    CREATE INDEX IX_CmsLoginLogs_CreatedAt ON CmsLoginLogs(CreatedAt);
 END
 GO
 
@@ -491,6 +539,14 @@ IF NOT EXISTS (SELECT * FROM CmsRecommendSlots WHERE Code = 'homepage_recommende
 BEGIN
     INSERT INTO CmsRecommendSlots (Name, Code, Type, SortOrder, IsEnabled, WebsiteId) VALUES 
     (N'首页推荐', 'homepage_recommended', 'Recommended', 3, 1, 1);
+END
+GO
+
+-- 为超级管理员角色添加所有栏目的权限
+IF NOT EXISTS (SELECT * FROM CmsRoleChannels WHERE RoleId = 1)
+BEGIN
+    INSERT INTO CmsRoleChannels (RoleId, ChannelId) 
+    SELECT 1, Id FROM CmsChannels WHERE IsDeleted = 0;
 END
 GO
 

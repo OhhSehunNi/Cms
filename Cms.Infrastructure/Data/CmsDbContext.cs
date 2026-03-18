@@ -24,7 +24,9 @@ namespace Cms.Infrastructure.Data
         public DbSet<CmsPermission> CmsPermissions { get; set; }
         public DbSet<CmsUserRole> CmsUserRoles { get; set; }
         public DbSet<CmsRolePermission> CmsRolePermissions { get; set; }
+        public DbSet<CmsRoleChannel> CmsRoleChannels { get; set; }
         public DbSet<CmsOperationLog> CmsOperationLogs { get; set; }
+        public DbSet<CmsLoginLog> CmsLoginLogs { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -111,10 +113,25 @@ namespace Cms.Infrastructure.Data
                 .WithMany(p => p.RolePermissions)
                 .HasForeignKey(rp => rp.PermissionId);
 
+            modelBuilder.Entity<CmsRoleChannel>()
+                .HasOne(rc => rc.Role)
+                .WithMany(r => r.RoleChannels)
+                .HasForeignKey(rc => rc.RoleId);
+
+            modelBuilder.Entity<CmsRoleChannel>()
+                .HasOne(rc => rc.Channel)
+                .WithMany()
+                .HasForeignKey(rc => rc.ChannelId);
+
             modelBuilder.Entity<CmsOperationLog>()
                 .HasOne(ol => ol.User)
                 .WithMany()
                 .HasForeignKey(ol => ol.UserId);
+
+            modelBuilder.Entity<CmsLoginLog>()
+                .HasOne(ll => ll.User)
+                .WithMany()
+                .HasForeignKey(ll => ll.UserId);
 
             modelBuilder.Entity<CmsTopic>()
                 .HasOne(t => t.Website)

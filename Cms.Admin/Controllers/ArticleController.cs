@@ -1,4 +1,4 @@
-using Cms.Application.DTOs;
+using Cms.Application.Services.Dtos;
 using Cms.Application.Services;
 using Microsoft.AspNetCore.Mvc;
 

@@ -3,16 +3,35 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Cms.Web.ViewModels;
 using Cms.Application.Services;
-using Cms.Application.DTOs;
+using Cms.Application.Services.Dtos;
 
 namespace Cms.Web.Controllers
 {
+    /// <summary>
+    /// 频道控制器
+    /// 处理频道相关的视图请求，包括频道列表页的展示
+    /// </summary>
     public class ChannelController : Controller
     {
+        /// <summary>
+        /// 文章服务接口
+        /// </summary>
         private readonly IArticleService _articleService;
+        /// <summary>
+        /// 频道服务接口
+        /// </summary>
         private readonly IChannelService _channelService;
+        /// <summary>
+        /// 网站服务接口
+        /// </summary>
         private readonly IWebsiteService _websiteService;
 
+        /// <summary>
+        /// 构造函数
+        /// </summary>
+        /// <param name="articleService">文章服务实例</param>
+        /// <param name="channelService">频道服务实例</param>
+        /// <param name="websiteService">网站服务实例</param>
         public ChannelController(IArticleService articleService, IChannelService channelService, IWebsiteService websiteService)
         {
             _articleService = articleService;
@@ -20,6 +39,12 @@ namespace Cms.Web.Controllers
             _websiteService = websiteService;
         }
 
+        /// <summary>
+        /// 频道列表页
+        /// </summary>
+        /// <param name="channelSlug">频道Slug</param>
+        /// <param name="page">页码，默认1</param>
+        /// <returns>频道列表视图</returns>
         [Route("{channelSlug}")]
         [ResponseCache(Duration = 1800, VaryByHeader = "Host")]
         public async Task<IActionResult> Index(string channelSlug, int page = 1)
@@ -66,6 +91,12 @@ namespace Cms.Web.Controllers
             return View(viewModel);
         }
 
+        /// <summary>
+        /// 根据Slug获取频道信息
+        /// </summary>
+        /// <param name="channelSlug">频道Slug</param>
+        /// <param name="websiteId">网站ID</param>
+        /// <returns>频道视图模型</returns>
         private async Task<ChannelViewModel> GetChannelBySlug(string channelSlug, int websiteId)
         {
             // 调用服务获取栏目
@@ -91,6 +122,12 @@ namespace Cms.Web.Controllers
             };
         }
 
+        /// <summary>
+        /// 递归查找频道
+        /// </summary>
+        /// <param name="channels">频道列表</param>
+        /// <param name="slug">频道Slug</param>
+        /// <returns>匹配的频道</returns>
         private ChannelDto FindChannelBySlug(List<ChannelDto> channels, string slug)
         {
             foreach (var channel in channels)
@@ -111,6 +148,14 @@ namespace Cms.Web.Controllers
             return null;
         }
 
+        /// <summary>
+        /// 获取频道文章列表
+        /// </summary>
+        /// <param name="channelId">频道ID</param>
+        /// <param name="websiteId">网站ID</param>
+        /// <param name="page">页码</param>
+        /// <param name="pageSize">每页数量</param>
+        /// <returns>文章列表</returns>
         private async Task<List<ArticleListItemViewModel>> GetChannelArticles(int channelId, int websiteId, int page, int pageSize)
         {
             // 调用服务获取文章列表

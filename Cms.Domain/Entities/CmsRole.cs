@@ -29,5 +29,10 @@ namespace Cms.Domain.Entities
         /// 角色权限关联列表
         /// </summary>
         public List<CmsRolePermission> RolePermissions { get; set; } = new List<CmsRolePermission>();
+
+        /// <summary>
+        /// 角色栏目关联列表
+        /// </summary>
+        public List<CmsRoleChannel> RoleChannels { get; set; } = new List<CmsRoleChannel>();
     }
 }

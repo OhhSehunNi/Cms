@@ -6,17 +6,41 @@ using Cms.Application.Services;
 
 namespace Cms.Web.Controllers
 {
+    /// <summary>
+    /// 文章控制器
+    /// 处理文章相关的视图请求，包括文章详情页的展示
+    /// </summary>
     public class ArticleController : Controller
     {
+        /// <summary>
+        /// 文章服务接口
+        /// </summary>
         private readonly IArticleService _articleService;
+        /// <summary>
+        /// 网站服务接口
+        /// </summary>
         private readonly IWebsiteService _websiteService;
 
+        /// <summary>
+        /// 构造函数
+        /// </summary>
+        /// <param name="articleService">文章服务实例</param>
+        /// <param name="websiteService">网站服务实例</param>
         public ArticleController(IArticleService articleService, IWebsiteService websiteService)
         {
             _articleService = articleService;
             _websiteService = websiteService;
         }
 
+        /// <summary>
+        /// 文章详情页
+        /// </summary>
+        /// <param name="channelSlug">频道Slug</param>
+        /// <param name="year">发布年份</param>
+        /// <param name="month">发布月份</param>
+        /// <param name="day">发布日期</param>
+        /// <param name="id">文章ID</param>
+        /// <returns>文章详情视图</returns>
         [Route("{channelSlug}/{year:int}/{month:int}/{day:int}/{id}.html")]
         [ResponseCache(Duration = 3600, VaryByHeader = "Host")]
         public async Task<IActionResult> Detail(string channelSlug, int year, int month, int day, int id)
@@ -71,6 +95,12 @@ namespace Cms.Web.Controllers
             return View(viewModel);
         }
 
+        /// <summary>
+        /// 根据ID获取文章信息
+        /// </summary>
+        /// <param name="id">文章ID</param>
+        /// <param name="websiteId">网站ID</param>
+        /// <returns>文章视图模型</returns>
         private async Task<ArticleViewModel> GetArticleById(int id, int websiteId)
         {
             // 实际实现中，应该调用服务获取文章详情
@@ -96,6 +126,12 @@ namespace Cms.Web.Controllers
             };
         }
 
+        /// <summary>
+        /// 获取上一篇文章
+        /// </summary>
+        /// <param name="id">当前文章ID</param>
+        /// <param name="websiteId">网站ID</param>
+        /// <returns>上一篇文章信息</returns>
         private async Task<ArticleListItemViewModel> GetPrevArticle(int id, int websiteId)
         {
             // 实际实现中，应该调用服务获取上一篇文章
@@ -114,6 +150,12 @@ namespace Cms.Web.Controllers
             };
         }
 
+        /// <summary>
+        /// 获取下一篇文章
+        /// </summary>
+        /// <param name="id">当前文章ID</param>
+        /// <param name="websiteId">网站ID</param>
+        /// <returns>下一篇文章信息</returns>
         private async Task<ArticleListItemViewModel> GetNextArticle(int id, int websiteId)
         {
             // 实际实现中，应该调用服务获取下一篇文章
@@ -132,6 +174,12 @@ namespace Cms.Web.Controllers
             };
         }
 
+        /// <summary>
+        /// 获取相关文章
+        /// </summary>
+        /// <param name="id">当前文章ID</param>
+        /// <param name="websiteId">网站ID</param>
+        /// <returns>相关文章列表</returns>
         private async Task<List<ArticleListItemViewModel>> GetRelatedArticles(int id, int websiteId)
         {
             // 实际实现中，应该调用服务获取相关文章

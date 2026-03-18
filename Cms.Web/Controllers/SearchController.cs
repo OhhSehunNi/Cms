@@ -6,17 +6,38 @@ using Cms.Application.Services;
 
 namespace Cms.Web.Controllers
 {
+    /// <summary>
+    /// 搜索控制器
+    /// 处理网站搜索功能，包括关键词搜索和结果展示
+    /// </summary>
     public class SearchController : Controller
     {
+        /// <summary>
+        /// 文章服务接口
+        /// </summary>
         private readonly IArticleService _articleService;
+        /// <summary>
+        /// 网站服务接口
+        /// </summary>
         private readonly IWebsiteService _websiteService;
 
+        /// <summary>
+        /// 构造函数
+        /// </summary>
+        /// <param name="articleService">文章服务实例</param>
+        /// <param name="websiteService">网站服务实例</param>
         public SearchController(IArticleService articleService, IWebsiteService websiteService)
         {
             _articleService = articleService;
             _websiteService = websiteService;
         }
 
+        /// <summary>
+        /// 搜索结果页
+        /// </summary>
+        /// <param name="keyword">搜索关键词</param>
+        /// <param name="page">页码，默认1</param>
+        /// <returns>搜索结果视图</returns>
         [Route("search")]
         public async Task<IActionResult> Index(string keyword, int page = 1)
         {
@@ -52,6 +73,14 @@ namespace Cms.Web.Controllers
             return View(viewModel);
         }
 
+        /// <summary>
+        /// 搜索文章
+        /// </summary>
+        /// <param name="keyword">搜索关键词</param>
+        /// <param name="websiteId">网站ID</param>
+        /// <param name="page">页码</param>
+        /// <param name="pageSize">每页数量</param>
+        /// <returns>搜索结果文章列表</returns>
         private async Task<List<ArticleListItemViewModel>> SearchArticles(string keyword, int websiteId, int page, int pageSize)
         {
             // 实际实现中，应该调用服务搜索文章

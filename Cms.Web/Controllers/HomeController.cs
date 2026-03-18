@@ -6,12 +6,31 @@ using Cms.Application.Services;
 
 namespace Cms.Web.Controllers
 {
+    /// <summary>
+    /// 首页控制器
+    /// 处理网站首页的视图请求，包括首页内容的展示
+    /// </summary>
     public class HomeController : Controller
     {
+        /// <summary>
+        /// 文章服务接口
+        /// </summary>
         private readonly IArticleService _articleService;
+        /// <summary>
+        /// 频道服务接口
+        /// </summary>
         private readonly IChannelService _channelService;
+        /// <summary>
+        /// 网站服务接口
+        /// </summary>
         private readonly IWebsiteService _websiteService;
 
+        /// <summary>
+        /// 构造函数
+        /// </summary>
+        /// <param name="articleService">文章服务实例</param>
+        /// <param name="channelService">频道服务实例</param>
+        /// <param name="websiteService">网站服务实例</param>
         public HomeController(IArticleService articleService, IChannelService channelService, IWebsiteService websiteService)
         {
             _articleService = articleService;
@@ -19,6 +38,10 @@ namespace Cms.Web.Controllers
             _websiteService = websiteService;
         }
 
+        /// <summary>
+        /// 网站首页
+        /// </summary>
+        /// <returns>首页视图</returns>
         [ResponseCache(Duration = 3600, VaryByHeader = "Host")]
         public async Task<IActionResult> Index()
         {
@@ -52,6 +75,11 @@ namespace Cms.Web.Controllers
             return View(viewModel);
         }
 
+        /// <summary>
+        /// 获取焦点图文章
+        /// </summary>
+        /// <param name="websiteId">网站ID</param>
+        /// <returns>焦点图文章列表</returns>
         private async Task<List<ArticleListItemViewModel>> GetFeaturedArticles(int websiteId)
         {
             // 调用服务获取焦点图文章
@@ -71,6 +99,11 @@ namespace Cms.Web.Controllers
             }).ToList();
         }
 
+        /// <summary>
+        /// 获取频道区块
+        /// </summary>
+        /// <param name="websiteId">网站ID</param>
+        /// <returns>频道区块列表</returns>
         private async Task<List<ChannelSectionViewModel>> GetChannelSections(int websiteId)
         {
             // 调用服务获取栏目列表
@@ -106,6 +139,11 @@ namespace Cms.Web.Controllers
             return sections;
         }
 
+        /// <summary>
+        /// 获取热门文章
+        /// </summary>
+        /// <param name="websiteId">网站ID</param>
+        /// <returns>热门文章列表</returns>
         private async Task<List<ArticleListItemViewModel>> GetHotArticles(int websiteId)
         {
             // 调用服务获取热门文章
@@ -125,6 +163,11 @@ namespace Cms.Web.Controllers
             }).ToList();
         }
 
+        /// <summary>
+        /// 获取标签
+        /// </summary>
+        /// <param name="websiteId">网站ID</param>
+        /// <returns>标签列表</returns>
         private async Task<List<string>> GetTags(int websiteId)
         {
             // 调用服务获取标签
