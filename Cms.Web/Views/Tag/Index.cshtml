@@ -1,0 +1,46 @@
+@model Cms.Web.ViewModels.TagViewModel
+
+@{
+    ViewData["Title"] = Model.SeoTitle;
+    ViewData["SeoTitle"] = Model.SeoTitle;
+    ViewData["SeoDescription"] = Model.SeoDescription;
+    ViewData["SeoKeywords"] = Model.SeoKeywords;
+}
+
+<!-- 面包屑导航 -->
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="/">首页</a></li>
+        <li class="breadcrumb-item active" aria-current="page">标签：@Model.TagName</li>
+    </ol>
+</nav>
+
+<!-- 标签信息 -->
+<div class="mb-4">
+    <h1>标签：@Model.TagName</h1>
+    <p class="text-muted">共有 @Model.TotalCount 篇相关文章</p>
+</div>
+
+<div class="row">
+    <!-- 主内容区 -->
+    <div class="col-lg-8">
+        <!-- 文章列表 -->
+        @await Html.PartialAsync("_ArticleList", Model.Articles)
+        
+        <!-- 分页 -->
+        <div class="mt-4">
+            @await Html.PartialAsync("_Pagination", Model)
+        </div>
+    </div>
+
+    <!-- 侧边栏 -->
+    <div class="col-lg-4">
+        <!-- 热门文章 -->
+        @await Component.InvokeAsync("HotArticles")
+        
+        <!-- 标签云 -->
+        <div class="mt-4">
+            @await Component.InvokeAsync("TagCloud")
+        </div>
+    </div>
+</div>

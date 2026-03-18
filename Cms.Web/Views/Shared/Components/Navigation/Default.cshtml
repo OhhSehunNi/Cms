@@ -1,0 +1,23 @@
+@model List<Cms.Web.ViewModels.NavigationItemViewModel>
+
+<ul class="navbar-nav">
+    @foreach (var item in Model)
+    {
+        <li class="nav-item @(item.Children.Count > 0 ? "dropdown" : "")">
+            <a class="nav-link @(item.Children.Count > 0 ? "dropdown-toggle" : "")"
+               href="@(string.IsNullOrEmpty(item.ChannelSlug) ? "/" : $"/{item.ChannelSlug}")"
+               @(item.Children.Count > 0 ? "data-bs-toggle=\"dropdown\" role=\"button\" aria-expanded=\"false\"" : "")>
+                @item.ChannelName
+            </a>
+            @if (item.Children.Count > 0)
+            {
+                <div class="dropdown-menu">
+                    @foreach (var child in item.Children)
+                    {
+                        <a class="dropdown-item" href="/@child.ChannelSlug">@child.ChannelName</a>
+                    }
+                </div>
+            }
+        </li>
+    }
+</ul>

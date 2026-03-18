@@ -1,0 +1,58 @@
+@model Cms.Web.ViewModels.TopicViewModel
+
+@{
+    ViewData["Title"] = Model.SeoTitle;
+    ViewData["SeoTitle"] = Model.SeoTitle;
+    ViewData["SeoDescription"] = Model.SeoDescription;
+    ViewData["SeoKeywords"] = Model.SeoKeywords;
+}
+
+<!-- 面包屑导航 -->
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="/">首页</a></li>
+        <li class="breadcrumb-item"><a href="/special">专题</a></li>
+        <li class="breadcrumb-item active" aria-current="page">@Model.TopicName</li>
+    </ol>
+    </nav>
+
+<!-- 专题头部（设计规范中的 topic-header） -->
+<div class="topic-header mb-4">
+    <div class="topic-cover">
+        @if (!string.IsNullOrEmpty(Model.CoverImage))
+        {
+            <img src="@Model.CoverImage" alt="@Model.TopicName" />
+        }
+    </div>
+    <div class="topic-info">
+        <h1>@Model.TopicName</h1>
+        @if (!string.IsNullOrEmpty(Model.Description))
+        {
+            <p class="topic-desc">@Model.Description</p>
+        }
+        <div class="topic-meta">
+            <span>@Model.TotalCount 篇文章</span>
+            <span>· 创建于 @Model.CreateTime.ToString("yyyy-MM-dd")</span>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- 主内容区 -->
+    <div class="col-lg-8">
+        @await Html.PartialAsync("_ArticleList", Model.Articles)
+
+        <div class="mt-4">
+            @await Html.PartialAsync("_Pagination", Model)
+        </div>
+    </div>
+
+    <!-- 侧边栏 -->
+    <div class="col-lg-4">
+        @await Component.InvokeAsync("HotArticles")
+
+        <div class="mt-4">
+            @await Component.InvokeAsync("Recommend", new { position = "sidebar", count = 5 })
+        </div>
+    </div>
+</div>
