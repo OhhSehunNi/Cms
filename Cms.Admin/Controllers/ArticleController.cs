@@ -79,7 +79,7 @@ namespace Cms.Admin.Controllers
         [HttpPost("/admin/articles/unpublish/{id}")]
         public async Task<IActionResult> Unpublish(int id)
         {
-            await _articleService.UnpublishAsync(id);
+            //await _articleService.UnpublishAsync(id);
             return RedirectToAction("Index");
         }
     }

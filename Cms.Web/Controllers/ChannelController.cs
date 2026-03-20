@@ -100,7 +100,7 @@ namespace Cms.Web.Controllers
         private async Task<ChannelViewModel> GetChannelBySlug(string channelSlug, int websiteId)
         {
             // 调用服务获取栏目
-            var channels = await _channelService.GetTreeAsync();
+            var channels = await _channelService.GetTreeAsync(websiteId);
             
             // 查找匹配的栏目
             var channel = FindChannelBySlug(channels, channelSlug);
@@ -159,7 +159,7 @@ namespace Cms.Web.Controllers
         private async Task<List<ArticleListItemViewModel>> GetChannelArticles(int channelId, int websiteId, int page, int pageSize)
         {
             // 调用服务获取文章列表
-            var articles = await _articleService.GetListAsync(page, pageSize, null, channelId, websiteId);
+            var articles = await _articleService.GetListAsync(page, pageSize, null, channelId);
             
             // 转换为ViewModel
             return articles.Select(a => new ArticleListItemViewModel

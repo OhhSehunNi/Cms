@@ -80,5 +80,28 @@ namespace Cms.Application.Services
         /// <param name="password">明文密码</param>
         /// <returns>BCrypt加密后的密码</returns>
         string GenerateBCryptPassword(string password);
+
+        /// <summary>
+        /// 分配用户角色
+        /// </summary>
+        /// <param name="userId">用户ID</param>
+        /// <param name="roleIds">角色ID列表</param>
+        /// <returns></returns>
+        Task AssignRolesAsync(int userId, List<int> roleIds);
+
+        /// <summary>
+        /// 重置用户密码
+        /// </summary>
+        /// <param name="userId">用户ID</param>
+        /// <param name="newPassword">新密码</param>
+        /// <returns></returns>
+        Task ResetPasswordAsync(int userId, string newPassword);
+
+        /// <summary>
+        /// 获取用户总数
+        /// </summary>
+        /// <param name="keyword">关键词</param>
+        /// <returns>用户总数</returns>
+        Task<int> GetCountAsync(string? keyword = null);
     }
 }

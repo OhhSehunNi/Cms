@@ -118,6 +118,41 @@ namespace Cms.Application.Services
         }
 
         /// <summary>
+        /// 获取权限总数
+        /// </summary>
+        /// <param name="keyword">关键词</param>
+        /// <returns>权限总数</returns>
+        public async Task<int> GetCountAsync(string? keyword = null)
+        {
+            IQueryable<CmsPermission> query = _dbContext.CmsPermissions;
+
+            if (!string.IsNullOrEmpty(keyword))
+            {
+                query = query.Where(p => p.Name.Contains(keyword) || p.Code.Contains(keyword) || p.Description.Contains(keyword));
+            }
+
+            return await query.CountAsync();
+        }
+
+        /// <summary>
+        /// 获取权限分类列表
+        /// </summary>
+        /// <returns>权限分类列表</returns>
+        public async Task<List<string>> GetCategoriesAsync()
+        {
+            var permissions = await _dbContext.CmsPermissions
+                .Select(p => p.Code)
+                .ToListAsync();
+
+            var categories = permissions
+                .Select(p => p.Split('.')[0])
+                .Distinct()
+                .ToList();
+
+            return categories;
+        }
+
+        /// <summary>
         /// 将实体映射为 DTO
         /// </summary>
         /// <param name="permission">权限实体</param>

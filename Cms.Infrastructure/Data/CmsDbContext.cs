@@ -3,31 +3,123 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cms.Infrastructure.Data
 {
+    /// <summary>
+    /// 内容管理系统数据库上下文
+    /// 负责管理系统中的所有实体和数据库关系
+    /// </summary>
     public class CmsDbContext : DbContext
     {
+        /// <summary>
+        /// 构造函数
+        /// </summary>
+        /// <param name="options">数据库上下文选项</param>
         public CmsDbContext(DbContextOptions<CmsDbContext> options) : base(options)
         {}
 
+        /// <summary>
+        /// 网站实体集合
+        /// </summary>
         public DbSet<CmsWebsite> CmsWebsites { get; set; }
+        
+        /// <summary>
+        /// 栏目实体集合
+        /// </summary>
         public DbSet<CmsChannel> CmsChannels { get; set; }
+        
+        /// <summary>
+        /// 文章实体集合
+        /// </summary>
         public DbSet<CmsArticle> CmsArticles { get; set; }
+        
+        /// <summary>
+        /// 文章内容实体集合
+        /// </summary>
         public DbSet<CmsArticleContent> CmsArticleContents { get; set; }
+        
+        /// <summary>
+        /// 标签实体集合
+        /// </summary>
         public DbSet<CmsTag> CmsTags { get; set; }
+        
+        /// <summary>
+        /// 文章标签关联实体集合
+        /// </summary>
         public DbSet<CmsArticleTag> CmsArticleTags { get; set; }
+        
+        /// <summary>
+        /// 专题实体集合
+        /// </summary>
         public DbSet<CmsTopic> CmsTopics { get; set; }
+        
+        /// <summary>
+        /// 专题文章关联实体集合
+        /// </summary>
         public DbSet<CmsTopicArticle> CmsTopicArticles { get; set; }
+        
+        /// <summary>
+        /// 媒体资源实体集合
+        /// </summary>
         public DbSet<CmsMediaAsset> CmsMediaAssets { get; set; }
+        
+        /// <summary>
+        /// 推荐位实体集合
+        /// </summary>
         public DbSet<CmsRecommendSlot> CmsRecommendSlots { get; set; }
+        
+        /// <summary>
+        /// 推荐内容实体集合
+        /// </summary>
         public DbSet<CmsRecommendItem> CmsRecommendItems { get; set; }
+        
+        /// <summary>
+        /// 用户实体集合
+        /// </summary>
         public DbSet<CmsUser> CmsUsers { get; set; }
+        
+        /// <summary>
+        /// 角色实体集合
+        /// </summary>
         public DbSet<CmsRole> CmsRoles { get; set; }
+        
+        /// <summary>
+        /// 权限实体集合
+        /// </summary>
         public DbSet<CmsPermission> CmsPermissions { get; set; }
+        
+        /// <summary>
+        /// 用户角色关联实体集合
+        /// </summary>
         public DbSet<CmsUserRole> CmsUserRoles { get; set; }
+        
+        /// <summary>
+        /// 角色权限关联实体集合
+        /// </summary>
         public DbSet<CmsRolePermission> CmsRolePermissions { get; set; }
+        
+        /// <summary>
+        /// 角色栏目关联实体集合
+        /// </summary>
         public DbSet<CmsRoleChannel> CmsRoleChannels { get; set; }
+        
+        /// <summary>
+        /// 操作日志实体集合
+        /// </summary>
         public DbSet<CmsOperationLog> CmsOperationLogs { get; set; }
+        
+        /// <summary>
+        /// 登录日志实体集合
+        /// </summary>
         public DbSet<CmsLoginLog> CmsLoginLogs { get; set; }
+        
+        /// <summary>
+        /// SEO重定向实体集合
+        /// </summary>
+        public DbSet<CmsSeoRedirect> CmsSeoRedirects { get; set; }
 
+        /// <summary>
+        /// 配置实体关系
+        /// </summary>
+        /// <param name="modelBuilder">模型构建器</param>
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -147,6 +239,11 @@ namespace Cms.Infrastructure.Data
                 .HasOne(ta => ta.Article)
                 .WithMany()
                 .HasForeignKey(ta => ta.ArticleId);
+
+            modelBuilder.Entity<CmsSeoRedirect>()
+                .HasOne(sr => sr.Website)
+                .WithMany(w => w.SeoRedirects)
+                .HasForeignKey(sr => sr.WebsiteId);
         }
     }
 }

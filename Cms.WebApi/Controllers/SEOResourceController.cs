@@ -28,22 +28,24 @@ namespace Cms.WebApi.Controllers
         /// <summary>
         /// 获取站点地图
         /// </summary>
+        /// <param name="websiteId">网站ID</param>
         /// <returns>XML格式的站点地图</returns>
         [HttpGet("sitemap")]
-        public async Task<IActionResult> GetSitemap()
+        public async Task<IActionResult> GetSitemap(int websiteId = 1)
         {
-            var sitemap = await _seoService.GenerateSitemapAsync();
+            var sitemap = await _seoService.GenerateSitemapAsync(websiteId);
             return Content(sitemap, "application/xml");
         }
 
         /// <summary>
         /// 获取robots.txt文件
         /// </summary>
+        /// <param name="websiteId">网站ID</param>
         /// <returns>文本格式的robots.txt内容</returns>
         [HttpGet("robots")]
-        public async Task<IActionResult> GetRobotsTxt()
+        public async Task<IActionResult> GetRobotsTxt(int websiteId = 1)
         {
-            var robotsTxt = await _seoService.GenerateRobotsTxtAsync();
+            var robotsTxt = await _seoService.GenerateRobotsTxtAsync(websiteId);
             return Content(robotsTxt, "text/plain");
         }
 
@@ -52,11 +54,12 @@ namespace Cms.WebApi.Controllers
         /// </summary>
         /// <param name="channelId">频道ID</param>
         /// <param name="articleId">文章ID</param>
+        /// <param name="websiteId">网站ID</param>
         /// <returns>面包屑导航数据</returns>
         [HttpGet("breadcrumbs")]
-        public async Task<IActionResult> GetBreadcrumbs(int? channelId = null, int? articleId = null)
+        public async Task<IActionResult> GetBreadcrumbs(int? channelId = null, int? articleId = null, int? websiteId = null)
         {
-            var breadcrumbs = await _seoService.GenerateBreadcrumbsAsync(channelId, articleId);
+            var breadcrumbs = await _seoService.GenerateBreadcrumbsAsync(channelId, articleId, websiteId);
             return Ok(new { breadcrumbs });
         }
     }

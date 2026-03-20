@@ -268,5 +268,68 @@ namespace Cms.Application.Services
         {
             return BCrypt.Net.BCrypt.HashPassword(password);
         }
+
+        /// <summary>
+        /// 分配用户角色
+        /// </summary>
+        /// <param name="userId">用户ID</param>
+        /// <param name="roleIds">角色ID列表</param>
+        /// <returns></returns>
+        public async Task AssignRolesAsync(int userId, List<int> roleIds)
+        {
+            var existingRoles = _dbContext.CmsUserRoles.Where(ur => ur.UserId == userId);
+            _dbContext.CmsUserRoles.RemoveRange(existingRoles);
+
+            foreach (var roleId in roleIds)
+            {
+                var userRole = new CmsUserRole
+                {
+                    UserId = userId,
+                    RoleId = roleId
+                };
+                _dbContext.CmsUserRoles.Add(userRole);
+            }
+
+            await _dbContext.SaveChangesAsync();
+
+            // 清除用户权限缓存
+            var permissionsKey = $"UserPermissions_{userId}";
+            _cacheService.Remove(permissionsKey);
+        }
+
+        /// <summary>
+        /// 重置用户密码
+        /// </summary>
+        /// <param name="userId">用户ID</param>
+        /// <param name="newPassword">新密码</param>
+        /// <returns></returns>
+        public async Task ResetPasswordAsync(int userId, string newPassword)
+        {
+            var user = await _dbContext.CmsUsers.FindAsync(userId);
+            if (user == null)
+                throw new Exception("User not found");
+
+            user.PasswordHash = HashPassword(newPassword);
+            user.UpdatedAt = DateTime.Now;
+
+            await _dbContext.SaveChangesAsync();
+        }
+
+        /// <summary>
+        /// 获取用户总数
+        /// </summary>
+        /// <param name="keyword">关键词</param>
+        /// <returns>用户总数</returns>
+        public async Task<int> GetCountAsync(string? keyword = null)
+        {
+            IQueryable<CmsUser> query = _dbContext.CmsUsers;
+
+            if (!string.IsNullOrEmpty(keyword))
+            {
+                query = query.Where(u => u.Username.Contains(keyword) || u.DisplayName.Contains(keyword));
+            }
+
+            return await query.CountAsync();
+        }
     }
 }

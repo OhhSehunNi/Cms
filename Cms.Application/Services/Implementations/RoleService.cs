@@ -167,6 +167,62 @@ namespace Cms.Application.Services
         }
 
         /// <summary>
+        /// 获取角色可管理的栏目
+        /// </summary>
+        /// <param name="roleId">角色ID</param>
+        /// <returns>栏目ID列表</returns>
+        public async Task<List<int>> GetRoleChannelsAsync(int roleId)
+        {
+            var roleChannels = await _dbContext.CmsRoleChannels
+                .Where(rc => rc.RoleId == roleId)
+                .Select(rc => rc.ChannelId)
+                .ToListAsync();
+
+            return roleChannels;
+        }
+
+        /// <summary>
+        /// 更新角色栏目权限
+        /// </summary>
+        /// <param name="roleId">角色ID</param>
+        /// <param name="channelIds">栏目ID列表</param>
+        /// <returns></returns>
+        public async Task UpdateRoleChannelsAsync(int roleId, List<int> channelIds)
+        {
+            var existingChannels = _dbContext.CmsRoleChannels.Where(rc => rc.RoleId == roleId);
+            _dbContext.CmsRoleChannels.RemoveRange(existingChannels);
+
+            foreach (var channelId in channelIds)
+            {
+                var roleChannel = new CmsRoleChannel
+                {
+                    RoleId = roleId,
+                    ChannelId = channelId
+                };
+                _dbContext.CmsRoleChannels.Add(roleChannel);
+            }
+
+            await _dbContext.SaveChangesAsync();
+        }
+
+        /// <summary>
+        /// 获取角色总数
+        /// </summary>
+        /// <param name="keyword">关键词</param>
+        /// <returns>角色总数</returns>
+        public async Task<int> GetCountAsync(string? keyword = null)
+        {
+            IQueryable<CmsRole> query = _dbContext.CmsRoles;
+
+            if (!string.IsNullOrEmpty(keyword))
+            {
+                query = query.Where(r => r.Name.Contains(keyword) || r.Description.Contains(keyword));
+            }
+
+            return await query.CountAsync();
+        }
+
+        /// <summary>
         /// 将实体映射为 DTO
         /// </summary>
         /// <param name="role">角色实体</param>

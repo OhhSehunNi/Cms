@@ -3,7 +3,7 @@ using Cms.Application.Services.Dtos;
 namespace Cms.Application.Services
 {
     /// <summary>
-    /// 文章服务接口，用于文章相关的业务逻辑
+    /// 文章服务接口，定义文章相关的业务逻辑
     /// </summary>
     public interface IArticleService
     {
@@ -21,9 +21,14 @@ namespace Cms.Application.Services
         /// <param name="pageSize">每页大小</param>
         /// <param name="keyword">关键词</param>
         /// <param name="channelId">栏目 ID</param>
+        /// <param name="status">状态</param>
+        /// <param name="startDate">开始日期</param>
+        /// <param name="endDate">结束日期</param>
+        /// <param name="isTop">是否置顶</param>
+        /// <param name="isRecommended">是否推荐</param>
         /// <param name="websiteId">网站 ID</param>
         /// <returns>文章 DTO 列表</returns>
-        Task<List<ArticleDto>> GetListAsync(int page, int pageSize, string? keyword = null, int? channelId = null, int websiteId = 1);
+        Task<List<ArticleDto>> GetListAsync(int page, int pageSize, string? keyword = null, int? channelId = null, string? status = null, DateTime? startDate = null, DateTime? endDate = null, bool? isTop = null, bool? isRecommended = null, int websiteId = 1);
 
         /// <summary>
         /// 创建文章
@@ -50,18 +55,18 @@ namespace Cms.Application.Services
         /// 发布文章
         /// </summary>
         /// <param name="id">文章 ID</param>
-        /// <returns></returns>
-        Task PublishAsync(int id);
+        /// <returns>发布后的文章 DTO</returns>
+        Task<ArticleDto> PublishAsync(int id);
 
         /// <summary>
         /// 下线文章
         /// </summary>
         /// <param name="id">文章 ID</param>
-        /// <returns></returns>
-        Task UnpublishAsync(int id);
+        /// <returns>下线后的文章 DTO</returns>
+        Task<ArticleDto> OfflineAsync(int id);
 
         /// <summary>
-        /// 增加浏览次数
+        /// 增加文章浏览量
         /// </summary>
         /// <param name="id">文章 ID</param>
         /// <returns></returns>

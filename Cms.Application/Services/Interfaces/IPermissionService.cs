@@ -43,5 +43,18 @@ namespace Cms.Application.Services
         /// <param name="id">权限 ID</param>
         /// <returns></returns>
         Task DeleteAsync(int id);
+
+        /// <summary>
+        /// 获取权限总数
+        /// </summary>
+        /// <param name="keyword">关键词</param>
+        /// <returns>权限总数</returns>
+        Task<int> GetCountAsync(string? keyword = null);
+
+        /// <summary>
+        /// 获取权限分类列表
+        /// </summary>
+        /// <returns>权限分类列表</returns>
+        Task<List<string>> GetCategoriesAsync();
     }
 }

@@ -26,6 +26,11 @@ namespace Cms.Domain.Entities
         public string? TextContent { get; set; }
 
         /// <summary>
+        /// 字数统计
+        /// </summary>
+        public int WordCount { get; set; }
+
+        /// <summary>
         /// 扩展 JSON 数据
         /// </summary>
         public string? ExtendJson { get; set; }

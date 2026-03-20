@@ -2,6 +2,7 @@ using Cms.Application.Services.Dtos;
 using Cms.Domain.Entities;
 using Cms.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
+using System.Text.RegularExpressions;
 
 namespace Cms.Application.Services
 {
@@ -11,14 +12,17 @@ namespace Cms.Application.Services
     public class ChannelService : IChannelService
     {
         private readonly CmsDbContext _dbContext;
+        private readonly ICacheService _cacheService;
 
         /// <summary>
         /// 构造函数
         /// </summary>
         /// <param name="dbContext">数据库上下文</param>
-        public ChannelService(CmsDbContext dbContext)
+        /// <param name="cacheService">缓存服务</param>
+        public ChannelService(CmsDbContext dbContext, ICacheService cacheService)
         {
             _dbContext = dbContext;
+            _cacheService = cacheService;
         }
 
         /// <summary>
@@ -42,16 +46,26 @@ namespace Cms.Application.Services
         /// <summary>
         /// 获取栏目树
         /// </summary>
+        /// <param name="websiteId">网站 ID</param>
         /// <returns>栏目 DTO 列表</returns>
-        public async Task<List<ChannelDto>> GetTreeAsync()
+        public async Task<List<ChannelDto>> GetTreeAsync(int websiteId)
         {
+            string cacheKey = $"channel:tree:{websiteId}";
+            var cachedTree = _cacheService.Get<List<ChannelDto>>(cacheKey);
+            if (cachedTree != null)
+                return cachedTree;
+
             var channels = await _dbContext.CmsChannels
                 .Include(c => c.Children)
+                .Where(c => c.WebsiteId == websiteId && !c.IsDeleted)
                 .OrderBy(c => c.SortOrder)
                 .ToListAsync();
 
             var rootChannels = channels.Where(c => c.ParentId == null).ToList();
-            return rootChannels.Select(MapToDto).ToList();
+            var tree = rootChannels.Select(MapToDto).ToList();
+
+            _cacheService.Set(cacheKey, tree, TimeSpan.FromHours(1));
+            return tree;
         }
 
         /// <summary>
@@ -60,11 +74,13 @@ namespace Cms.Application.Services
         /// <param name="page">页码</param>
         /// <param name="pageSize">每页大小</param>
         /// <param name="keyword">关键词</param>
+        /// <param name="websiteId">网站 ID</param>
         /// <returns>栏目 DTO 列表</returns>
-        public async Task<List<ChannelDto>> GetListAsync(int page, int pageSize, string keyword = null)
+        public async Task<List<ChannelDto>> GetListAsync(int page, int pageSize, string keyword = null, int websiteId = 1)
         {
             IQueryable<CmsChannel> query = _dbContext.CmsChannels
-                .Include(c => c.Parent);
+                .Include(c => c.Parent)
+                .Where(c => c.WebsiteId == websiteId && !c.IsDeleted);
 
             if (!string.IsNullOrEmpty(keyword))
             {
@@ -87,12 +103,40 @@ namespace Cms.Application.Services
         /// <returns>创建后的栏目 DTO</returns>
         public async Task<ChannelDto> CreateAsync(ChannelDto channelDto)
         {
+            // 验证 Slug
+            if (!string.IsNullOrEmpty(channelDto.Slug) && !CmsChannel.IsValidSlug(channelDto.Slug))
+                throw new Exception("Slug 只能包含字母、数字和-");
+
+            // 检查 Slug 唯一性
+            if (!string.IsNullOrEmpty(channelDto.Slug))
+            {
+                var existingChannel = await _dbContext.CmsChannels
+                    .Where(c => c.Slug == channelDto.Slug && c.WebsiteId == channelDto.WebsiteId && !c.IsDeleted)
+                    .FirstOrDefaultAsync();
+                if (existingChannel != null)
+                    throw new Exception("Slug 已存在");
+            }
+
+            // 检查父栏目
+            if (channelDto.ParentId.HasValue)
+            {
+                var parentChannel = await _dbContext.CmsChannels.FindAsync(channelDto.ParentId);
+                if (parentChannel == null)
+                    throw new Exception("父栏目不存在");
+
+                // 检查层级
+                if (parentChannel.GetLevel() >= 3)
+                    throw new Exception("超过最大层级限制");
+            }
+
             var channel = MapToEntity(channelDto);
-            channel.CreatedAt = DateTime.Now;
-            channel.UpdatedAt = DateTime.Now;
+            channel.Create();
 
             _dbContext.CmsChannels.Add(channel);
             await _dbContext.SaveChangesAsync();
+
+            // 清除缓存
+            ClearChannelCache(channel.WebsiteId);
 
             return await GetByIdAsync(channel.Id);
         }
@@ -104,14 +148,56 @@ namespace Cms.Application.Services
         /// <returns>更新后的栏目 DTO</returns>
         public async Task<ChannelDto> UpdateAsync(ChannelDto channelDto)
         {
-            var channel = await _dbContext.CmsChannels.FindAsync(channelDto.Id);
+            var channel = await _dbContext.CmsChannels
+                .Include(c => c.Parent)
+                .FirstOrDefaultAsync(c => c.Id == channelDto.Id);
             if (channel == null)
-                throw new Exception("Channel not found");
+                throw new Exception("栏目不存在");
+
+            // 验证 Slug
+            if (!string.IsNullOrEmpty(channelDto.Slug) && !CmsChannel.IsValidSlug(channelDto.Slug))
+                throw new Exception("Slug 只能包含字母、数字和-");
+
+            // 检查 Slug 唯一性
+            if (!string.IsNullOrEmpty(channelDto.Slug) && channelDto.Slug != channel.Slug)
+            {
+                var existingChannel = await _dbContext.CmsChannels
+                    .Where(c => c.Slug == channelDto.Slug && c.WebsiteId == channelDto.WebsiteId && c.Id != channelDto.Id && !c.IsDeleted)
+                    .FirstOrDefaultAsync();
+                if (existingChannel != null)
+                    throw new Exception("Slug 已存在");
+            }
+
+            // 检查父栏目
+            if (channelDto.ParentId.HasValue)
+            {
+                var parentChannel = await _dbContext.CmsChannels.FindAsync(channelDto.ParentId);
+                if (parentChannel == null)
+                    throw new Exception("父栏目不存在");
+
+                // 检查循环引用
+                if (channel.CheckCircularReference(parentChannel))
+                    throw new Exception("不能设置子栏目为父栏目");
+
+                // 检查层级
+                int newLevel = 1;
+                var current = parentChannel;
+                while (current != null)
+                {
+                    newLevel++;
+                    current = current.Parent;
+                }
+                if (newLevel > 3)
+                    throw new Exception("超过最大层级限制");
+            }
 
             UpdateEntityFromDto(channel, channelDto);
-            channel.UpdatedAt = DateTime.Now;
+            channel.Update();
 
             await _dbContext.SaveChangesAsync();
+
+            // 清除缓存
+            ClearChannelCache(channel.WebsiteId);
 
             return await GetByIdAsync(channel.Id);
         }
@@ -123,12 +209,27 @@ namespace Cms.Application.Services
         /// <returns></returns>
         public async Task DeleteAsync(int id)
         {
-            var channel = await _dbContext.CmsChannels.FindAsync(id);
-            if (channel != null)
-            {
-                channel.IsDeleted = true;
-                await _dbContext.SaveChangesAsync();
-            }
+            var channel = await _dbContext.CmsChannels
+                .Include(c => c.Children)
+                .Include(c => c.Articles)
+                .FirstOrDefaultAsync(c => c.Id == id);
+
+            if (channel == null)
+                throw new Exception("栏目不存在");
+
+            // 检查是否有子栏目
+            if (channel.Children.Any())
+                throw new Exception("存在子栏目，无法删除");
+
+            // 检查是否有文章
+            if (channel.Articles.Any())
+                throw new Exception("存在文章，无法删除");
+
+            channel.Delete();
+            await _dbContext.SaveChangesAsync();
+
+            // 清除缓存
+            ClearChannelCache(channel.WebsiteId);
         }
 
         /// <summary>
@@ -138,6 +239,11 @@ namespace Cms.Application.Services
         /// <returns>栏目 DTO 列表</returns>
         public async Task<List<ChannelDto>> GetNavigationChannelsAsync(int websiteId)
         {
+            string cacheKey = $"channel:navigation:{websiteId}";
+            var cachedNavigation = _cacheService.Get<List<ChannelDto>>(cacheKey);
+            if (cachedNavigation != null)
+                return cachedNavigation;
+
             var channels = await _dbContext.CmsChannels
                 .Include(c => c.Children)
                 .Where(c => c.WebsiteId == websiteId && c.IsShowInNav && c.IsEnabled && !c.IsDeleted)
@@ -145,7 +251,74 @@ namespace Cms.Application.Services
                 .ToListAsync();
 
             var rootChannels = channels.Where(c => c.ParentId == null).ToList();
-            return rootChannels.Select(MapToDto).ToList();
+            var navigation = rootChannels.Select(MapToDto).ToList();
+
+            _cacheService.Set(cacheKey, navigation, TimeSpan.FromHours(1));
+            return navigation;
+        }
+
+        /// <summary>
+        /// 修改排序
+        /// </summary>
+        /// <param name="sortRequests">排序请求</param>
+        /// <returns></returns>
+        public async Task UpdateSortAsync(List<SortRequestDto> sortRequests)
+        {
+            foreach (var request in sortRequests)
+            {
+                var channel = await _dbContext.CmsChannels.FindAsync(request.Id);
+                if (channel != null)
+                {
+                    channel.SortOrder = request.SortOrder;
+                    channel.Update();
+                }
+            }
+
+            await _dbContext.SaveChangesAsync();
+
+            // 清除缓存
+            if (sortRequests.Any())
+            {
+                var firstChannel = await _dbContext.CmsChannels.FindAsync(sortRequests[0].Id);
+                if (firstChannel != null)
+                {
+                    ClearChannelCache(firstChannel.WebsiteId);
+                }
+            }
+        }
+
+        /// <summary>
+        /// 启用/停用栏目
+        /// </summary>
+        /// <param name="id">栏目 ID</param>
+        /// <returns>更新后的栏目 DTO</returns>
+        public async Task<ChannelDto> ToggleStatusAsync(int id)
+        {
+            var channel = await _dbContext.CmsChannels.FindAsync(id);
+            if (channel == null)
+                throw new Exception("栏目不存在");
+
+            if (channel.IsEnabled)
+                channel.Disable();
+            else
+                channel.Enable();
+
+            await _dbContext.SaveChangesAsync();
+
+            // 清除缓存
+            ClearChannelCache(channel.WebsiteId);
+
+            return await GetByIdAsync(channel.Id);
+        }
+
+        /// <summary>
+        /// 清除栏目缓存
+        /// </summary>
+        /// <param name="websiteId">网站 ID</param>
+        private void ClearChannelCache(int websiteId)
+        {
+            _cacheService.Remove($"channel:tree:{websiteId}");
+            _cacheService.Remove($"channel:navigation:{websiteId}");
         }
 
         /// <summary>
@@ -169,6 +342,7 @@ namespace Cms.Application.Services
                 SeoKeywords = channel.SeoKeywords,
                 TemplateType = channel.TemplateType,
                 IsEnabled = channel.IsEnabled,
+                WebsiteId = channel.WebsiteId,
                 Children = channel.Children.Select(MapToDto).ToList()
             };
         }
@@ -191,7 +365,8 @@ namespace Cms.Application.Services
                 SeoDescription = channelDto.SeoDescription,
                 SeoKeywords = channelDto.SeoKeywords,
                 TemplateType = channelDto.TemplateType,
-                IsEnabled = channelDto.IsEnabled
+                IsEnabled = channelDto.IsEnabled,
+                WebsiteId = channelDto.WebsiteId
             };
         }
 

@@ -3,6 +3,16 @@ using System.ComponentModel.DataAnnotations.Schema;
 namespace Cms.Domain.Entities
 {
     /// <summary>
+    /// 文章状态枚举
+    /// </summary>
+    public static class ArticleStatus
+    {
+        public const string Draft = "Draft";
+        public const string Published = "Published";
+        public const string Offline = "Offline";
+    }
+
+    /// <summary>
     /// 文章实体类，用于管理网站文章
     /// </summary>
     public class CmsArticle : BaseEntity
@@ -127,5 +137,70 @@ namespace Cms.Domain.Entities
         /// 文章标签关联列表
         /// </summary>
         public List<CmsArticleTag> ArticleTags { get; set; } = new List<CmsArticleTag>();
+
+        /// <summary>
+        /// 创建文章
+        /// </summary>
+        public void Create()
+        {
+            Status = ArticleStatus.Draft;
+            CreatedAt = DateTime.Now;
+            UpdatedAt = DateTime.Now;
+        }
+
+        /// <summary>
+        /// 更新文章
+        /// </summary>
+        public void Update()
+        {
+            UpdatedAt = DateTime.Now;
+        }
+
+        /// <summary>
+        /// 发布文章
+        /// </summary>
+        public void Publish()
+        {
+            Status = ArticleStatus.Published;
+            PublishTime = DateTime.Now;
+            UpdatedAt = DateTime.Now;
+        }
+
+        /// <summary>
+        /// 下线文章
+        /// </summary>
+        public void Offline()
+        {
+            Status = ArticleStatus.Offline;
+            UpdatedAt = DateTime.Now;
+        }
+
+        /// <summary>
+        /// 删除文章
+        /// </summary>
+        public void Delete()
+        {
+            IsDeleted = true;
+            UpdatedAt = DateTime.Now;
+        }
+
+        /// <summary>
+        /// 检查是否可以发布
+        /// </summary>
+        /// <returns>是否可以发布</returns>
+        public bool CanPublish()
+        {
+            // 检查是否有正文
+            return !string.IsNullOrEmpty(Content?.HtmlContent);
+        }
+
+        /// <summary>
+        /// 检查是否可以在前台显示
+        /// </summary>
+        /// <returns>是否可以显示</returns>
+        public bool CanShow()
+        {
+            return Status == ArticleStatus.Published && !IsDeleted;
+        }
     }
 }

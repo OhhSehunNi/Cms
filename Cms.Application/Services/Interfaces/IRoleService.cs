@@ -58,5 +58,27 @@ namespace Cms.Application.Services
         /// <param name="permissionIds">权限 ID 列表</param>
         /// <returns></returns>
         Task UpdateRolePermissionsAsync(int roleId, List<int> permissionIds);
+
+        /// <summary>
+        /// 获取角色可管理的栏目
+        /// </summary>
+        /// <param name="roleId">角色ID</param>
+        /// <returns>栏目ID列表</returns>
+        Task<List<int>> GetRoleChannelsAsync(int roleId);
+
+        /// <summary>
+        /// 更新角色栏目权限
+        /// </summary>
+        /// <param name="roleId">角色ID</param>
+        /// <param name="channelIds">栏目ID列表</param>
+        /// <returns></returns>
+        Task UpdateRoleChannelsAsync(int roleId, List<int> channelIds);
+
+        /// <summary>
+        /// 获取角色总数
+        /// </summary>
+        /// <param name="keyword">关键词</param>
+        /// <returns>角色总数</returns>
+        Task<int> GetCountAsync(string? keyword = null);
     }
 }

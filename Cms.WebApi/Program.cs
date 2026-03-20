@@ -53,6 +53,7 @@ builder.Services.AddScoped<ICacheService, CacheService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ILoginLogService, LoginLogService>();
 builder.Services.AddScoped<IRoleChannelService, RoleChannelService>();
+builder.Services.AddScoped<IHtmlSanitizerService, HtmlSanitizerService>();
 
 // Add JWT authentication
 builder.Services.AddAuthentication(options =>

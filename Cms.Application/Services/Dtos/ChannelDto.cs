@@ -66,8 +66,29 @@ namespace Cms.Application.Services.Dtos
         public bool IsEnabled { get; set; }
 
         /// <summary>
+        /// 网站 ID
+        /// </summary>
+        public int WebsiteId { get; set; }
+
+        /// <summary>
         /// 子栏目列表
         /// </summary>
         public List<ChannelDto> Children { get; set; } = new List<ChannelDto>();
+    }
+
+    /// <summary>
+    /// 排序请求 DTO
+    /// </summary>
+    public class SortRequestDto
+    {
+        /// <summary>
+        /// 栏目 ID
+        /// </summary>
+        public int Id { get; set; }
+
+        /// <summary>
+        /// 排序顺序
+        /// </summary>
+        public int SortOrder { get; set; }
     }
 }

@@ -1,6 +1,7 @@
 using Cms.Application.Services.Dtos;
 using Cms.Application.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 
 namespace Cms.WebApi.Controllers
 {
@@ -10,6 +11,7 @@ namespace Cms.WebApi.Controllers
     /// </summary>
     [Route("api/[controller]")]
     [ApiController]
+    [AllowAnonymous]
     public class TopicController : ControllerBase
     {
         /// <summary>

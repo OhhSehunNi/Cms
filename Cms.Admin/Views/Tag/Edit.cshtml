@@ -1,0 +1,25 @@
+@{ ViewData["Title"] = "编辑标签"; }
+
+<h1>编辑标签</h1>
+
+<form asp-action="Edit" method="post">
+    <input type="hidden" name="Id" value="@Model.Id" />
+    <div class="form-group">
+        <label for="Name">标签名称</label>
+        <input type="text" id="Name" name="Name" value="@Model.Name" class="form-control" required />
+    </div>
+    <div class="form-group">
+        <label for="Slug">Slug</label>
+        <input type="text" id="Slug" name="Slug" value="@Model.Slug" class="form-control" required />
+        <small class="form-text text-muted">URL友好的名称，通常使用小写字母和连字符</small>
+    </div>
+    <input type="hidden" name="WebsiteId" value="@Model.WebsiteId" />
+    <div class="form-group mt-4">
+        <button type="submit" class="btn btn-primary">
+            <i class="bi bi-save"></i> 保存
+        </button>
+        <a asp-action="Index" class="btn btn-outline-secondary ml-2">
+            <i class="bi bi-arrow-left"></i> 取消
+        </a>
+    </div>
+</form>
