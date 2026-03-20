@@ -26,22 +26,24 @@ namespace Cms.Web.Controllers
         /// <summary>
         /// 生成网站地图
         /// </summary>
+        /// <param name="websiteId">网站ID</param>
         /// <returns>网站地图XML内容</returns>
         [HttpGet("/sitemap.xml")]
-        public async Task<IActionResult> Sitemap()
+        public async Task<IActionResult> Sitemap(int websiteId = 1)
         {
-            var sitemap = await _seoService.GenerateSitemapAsync();
+            var sitemap = await _seoService.GenerateSitemapAsync(websiteId);
             return Content(sitemap, "application/xml");
         }
 
         /// <summary>
         /// 生成robots.txt文件
         /// </summary>
+        /// <param name="websiteId">网站ID</param>
         /// <returns>robots.txt文本内容</returns>
         [HttpGet("/robots.txt")]
-        public async Task<IActionResult> RobotsTxt()
+        public async Task<IActionResult> RobotsTxt(int websiteId = 1)
         {
-            var robotsTxt = await _seoService.GenerateRobotsTxtAsync();
+            var robotsTxt = await _seoService.GenerateRobotsTxtAsync(websiteId);
             return Content(robotsTxt, "text/plain");
         }
     }

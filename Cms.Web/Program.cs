@@ -16,11 +16,13 @@ builder.Services.AddDbContext<CmsDbContext>(options =>
 builder.Services.AddMemoryCache();
 
 // Add cache service
-builder.Services.AddSingleton<Cms.Infrastructure.Services.ICacheService>(sp => 
-    new Cms.Infrastructure.Services.MemoryCacheService(sp.GetRequiredService<IMemoryCache>())
+builder.Services.AddSingleton<Cms.Application.Services.ICacheService, Cms.Application.Services.CacheService>();
+builder.Services.AddSingleton<Cms.Domain.Services.ICacheService>(sp => 
+    (Cms.Domain.Services.ICacheService)sp.GetRequiredService<Cms.Application.Services.ICacheService>()
 );
 
 // Add application services
+builder.Services.AddScoped<Cms.Application.Services.IHtmlSanitizerService, Cms.Application.Services.HtmlSanitizerService>();
 builder.Services.AddScoped<Cms.Application.Services.IArticleService, Cms.Application.Services.ArticleService>();
 builder.Services.AddScoped<Cms.Application.Services.IChannelService, Cms.Application.Services.ChannelService>();
 builder.Services.AddScoped<Cms.Application.Services.IWebsiteService, Cms.Application.Services.WebsiteService>();
@@ -29,6 +31,9 @@ builder.Services.AddScoped<Cms.Application.Services.ITopicService, Cms.Applicati
 builder.Services.AddScoped<Cms.Application.Services.IRecommendService, Cms.Application.Services.RecommendService>();
 builder.Services.AddScoped<Cms.Application.Services.ISEOService, Cms.Application.Services.SEOService>();
 builder.Services.AddScoped<Cms.Application.Services.IMediaAssetService, Cms.Application.Services.MediaAssetService>();
+
+// Add configuration as a service
+builder.Services.AddSingleton<IConfiguration>(builder.Configuration);
 
 var app = builder.Build();
 

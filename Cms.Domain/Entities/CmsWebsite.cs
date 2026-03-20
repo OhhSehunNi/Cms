@@ -74,5 +74,10 @@ namespace Cms.Domain.Entities
         /// 网站下的推荐位列表
         /// </summary>
         public List<CmsRecommendSlot> RecommendSlots { get; set; } = new List<CmsRecommendSlot>();
+
+        /// <summary>
+        /// 网站下的SEO重定向规则列表
+        /// </summary>
+        public List<CmsSeoRedirect> SeoRedirects { get; set; } = new List<CmsSeoRedirect>();
     }
 }

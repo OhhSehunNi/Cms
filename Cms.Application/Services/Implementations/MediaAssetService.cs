@@ -13,16 +13,19 @@ namespace Cms.Application.Services
     {
         private readonly CmsDbContext _dbContext;
         private readonly string _uploadPath;
+        private readonly ICacheService _cacheService;
 
         /// <summary>
         /// 构造函数
         /// </summary>
         /// <param name="dbContext">数据库上下文</param>
         /// <param name="configuration">配置</param>
-        public MediaAssetService(CmsDbContext dbContext, IConfiguration configuration)
+        /// <param name="cacheService">缓存服务</param>
+        public MediaAssetService(CmsDbContext dbContext, IConfiguration configuration, ICacheService cacheService)
         {
             _dbContext = dbContext;
             _uploadPath = configuration["UploadPath"] ?? "wwwroot/uploads";
+            _cacheService = cacheService;
             
             if (!Directory.Exists(_uploadPath))
             {
@@ -37,11 +40,19 @@ namespace Cms.Application.Services
         /// <returns>媒体资源 DTO</returns>
         public async Task<MediaAssetDto> GetByIdAsync(int id)
         {
-            var asset = await _dbContext.CmsMediaAssets.FindAsync(id);
+            string cacheKey = $"media:asset:{id}";
+            var cachedAsset = _cacheService.Get<MediaAssetDto>(cacheKey);
+            if (cachedAsset != null)
+                return cachedAsset;
+
+            var asset = await _dbContext.CmsMediaAssets
+                .FirstOrDefaultAsync(a => a.Id == id && !a.IsDeleted);
             if (asset == null)
                 return null;
 
-            return MapToDto(asset);
+            var assetDto = MapToDto(asset);
+            _cacheService.Set(cacheKey, assetDto, TimeSpan.FromMinutes(30));
+            return assetDto;
         }
 
         /// <summary>
@@ -54,6 +65,11 @@ namespace Cms.Application.Services
         /// <returns>媒体资源 DTO 列表</returns>
         public async Task<List<MediaAssetDto>> GetListAsync(int page, int pageSize, string keyword = null, string group = null)
         {
+            string cacheKey = $"media:assets:list:{page}:{pageSize}:{keyword ?? string.Empty}:{group ?? string.Empty}";
+            var cachedAssets = _cacheService.Get<List<MediaAssetDto>>(cacheKey);
+            if (cachedAssets != null)
+                return cachedAssets;
+
             var query = _dbContext.CmsMediaAssets.AsQueryable();
 
             if (!string.IsNullOrEmpty(keyword))
@@ -67,12 +83,15 @@ namespace Cms.Application.Services
             }
 
             var assets = await query
+                .Where(a => !a.IsDeleted)
                 .OrderByDescending(a => a.CreatedAt)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
                 .ToListAsync();
 
-            return assets.Select(MapToDto).ToList();
+            var assetDtos = assets.Select(MapToDto).ToList();
+            _cacheService.Set(cacheKey, assetDtos, TimeSpan.FromMinutes(30));
+            return assetDtos;
         }
 
         /// <summary>
@@ -108,6 +127,9 @@ namespace Cms.Application.Services
             _dbContext.CmsMediaAssets.Add(asset);
             await _dbContext.SaveChangesAsync();
 
+            // 清理缓存
+            await ClearMediaCacheAsync();
+
             return await GetByIdAsync(asset.Id);
         }
 
@@ -119,7 +141,7 @@ namespace Cms.Application.Services
         public async Task DeleteAsync(int id)
         {
             var asset = await _dbContext.CmsMediaAssets.FindAsync(id);
-            if (asset != null)
+            if (asset != null && !asset.IsDeleted)
             {
                 if (File.Exists(asset.Path))
                 {
@@ -128,6 +150,10 @@ namespace Cms.Application.Services
 
                 asset.IsDeleted = true;
                 await _dbContext.SaveChangesAsync();
+
+                // 清理缓存
+                await ClearMediaCacheAsync();
+                _cacheService.Remove($"media:asset:{id}");
             }
         }
 
@@ -137,12 +163,18 @@ namespace Cms.Application.Services
         /// <returns>分组名称列表</returns>
         public async Task<List<string>> GetGroupsAsync()
         {
+            string cacheKey = "media:groups";
+            var cachedGroups = _cacheService.Get<List<string>>(cacheKey);
+            if (cachedGroups != null)
+                return cachedGroups;
+
             var groups = await _dbContext.CmsMediaAssets
-                .Where(a => !string.IsNullOrEmpty(a.Group))
+                .Where(a => !string.IsNullOrEmpty(a.Group) && !a.IsDeleted)
                 .Select(a => a.Group)
                 .Distinct()
                 .ToListAsync();
 
+            _cacheService.Set(cacheKey, groups, TimeSpan.FromMinutes(30));
             return groups;
         }
 
@@ -183,6 +215,18 @@ namespace Cms.Application.Services
                 size /= 1024;
             }
             return $"{size:0.##} {sizes[order]}";
+        }
+
+        /// <summary>
+        /// 清理媒体资源相关的缓存
+        /// </summary>
+        /// <returns></returns>
+        private async Task ClearMediaCacheAsync()
+        {
+            // 清理媒体资源列表缓存
+            _cacheService.Remove("media:assets:list:*");
+            // 清理分组列表缓存
+            _cacheService.Remove("media:groups");
         }
     }
 }

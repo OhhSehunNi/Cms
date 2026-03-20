@@ -53,7 +53,7 @@ namespace Cms.Web.ViewComponents
         private async Task<List<ArticleListItemViewModel>> GetHotArticles(int websiteId, int count)
         {
             // 调用服务获取热门文章，按浏览量排序
-            var articles = await _articleService.GetListAsync(1, count, null, null, websiteId);
+            var articles = await _articleService.GetListAsync(1, count, null, null);
             
             // 转换为ViewModel
             return articles.Select(a => new ArticleListItemViewModel

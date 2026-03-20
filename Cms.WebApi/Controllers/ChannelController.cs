@@ -34,23 +34,38 @@ namespace Cms.WebApi.Controllers
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(int id)
         {
-            var channel = await _channelService.GetByIdAsync(id);
-            if (channel == null)
+            try
             {
-                return NotFound();
+                var channel = await _channelService.GetByIdAsync(id);
+                if (channel == null)
+                {
+                    return NotFound("栏目不存在");
+                }
+                return Ok(channel);
             }
-            return Ok(channel);
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
 
         /// <summary>
         /// 获取频道树
         /// </summary>
+        /// <param name="websiteId">网站ID</param>
         /// <returns>频道树结构</returns>
         [HttpGet("tree")]
-        public async Task<IActionResult> GetTree()
+        public async Task<IActionResult> GetTree(int websiteId = 1)
         {
-            var channels = await _channelService.GetTreeAsync();
-            return Ok(channels);
+            try
+            {
+                var channels = await _channelService.GetTreeAsync(websiteId);
+                return Ok(channels);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
 
         /// <summary>
@@ -59,12 +74,20 @@ namespace Cms.WebApi.Controllers
         /// <param name="page">页码，默认1</param>
         /// <param name="pageSize">每页数量，默认10</param>
         /// <param name="keyword">搜索关键词</param>
+        /// <param name="websiteId">网站ID，默认1</param>
         /// <returns>频道列表</returns>
         [HttpGet]
-        public async Task<IActionResult> GetList(int page = 1, int pageSize = 10, string? keyword = null)
+        public async Task<IActionResult> GetList(int page = 1, int pageSize = 10, string? keyword = null, int websiteId = 1)
         {
-            var channels = await _channelService.GetListAsync(page, pageSize, keyword);
-            return Ok(channels);
+            try
+            {
+                var channels = await _channelService.GetListAsync(page, pageSize, keyword, websiteId);
+                return Ok(channels);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
 
         /// <summary>
@@ -75,8 +98,15 @@ namespace Cms.WebApi.Controllers
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] ChannelDto channelDto)
         {
-            var channel = await _channelService.CreateAsync(channelDto);
-            return CreatedAtAction(nameof(GetById), new { id = channel.Id }, channel);
+            try
+            {
+                var channel = await _channelService.CreateAsync(channelDto);
+                return CreatedAtAction(nameof(GetById), new { id = channel.Id }, channel);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
 
         /// <summary>
@@ -88,12 +118,19 @@ namespace Cms.WebApi.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(int id, [FromBody] ChannelDto channelDto)
         {
-            if (id != channelDto.Id)
+            try
             {
-                return BadRequest();
+                if (id != channelDto.Id)
+                {
+                    return BadRequest("ID不匹配");
+                }
+                var updatedChannel = await _channelService.UpdateAsync(channelDto);
+                return Ok(updatedChannel);
             }
-            var updatedChannel = await _channelService.UpdateAsync(channelDto);
-            return Ok(updatedChannel);
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
 
         /// <summary>
@@ -104,8 +141,15 @@ namespace Cms.WebApi.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
-            await _channelService.DeleteAsync(id);
-            return NoContent();
+            try
+            {
+                await _channelService.DeleteAsync(id);
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
 
         /// <summary>
@@ -116,8 +160,53 @@ namespace Cms.WebApi.Controllers
         [HttpGet("navigation/{websiteId}")]
         public async Task<IActionResult> GetNavigationChannels(int websiteId)
         {
-            var channels = await _channelService.GetNavigationChannelsAsync(websiteId);
-            return Ok(channels);
+            try
+            {
+                var channels = await _channelService.GetNavigationChannelsAsync(websiteId);
+                return Ok(channels);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// 修改排序
+        /// </summary>
+        /// <param name="sortRequests">排序请求</param>
+        /// <returns>无内容</returns>
+        [HttpPost("sort")]
+        public async Task<IActionResult> UpdateSort([FromBody] List<SortRequestDto> sortRequests)
+        {
+            try
+            {
+                await _channelService.UpdateSortAsync(sortRequests);
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// 启用/停用栏目
+        /// </summary>
+        /// <param name="id">栏目ID</param>
+        /// <returns>更新后的栏目信息</returns>
+        [HttpPost("toggle")]
+        public async Task<IActionResult> ToggleStatus(int id)
+        {
+            try
+            {
+                var channel = await _channelService.ToggleStatusAsync(id);
+                return Ok(channel);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
     }
 }

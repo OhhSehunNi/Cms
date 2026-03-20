@@ -542,6 +542,84 @@ BEGIN
 END
 GO
 
+-- =============================================
+-- 16. SEO重定向表 (CmsSeoRedirects)
+-- =============================================
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'CmsSeoRedirects')
+BEGIN
+    CREATE TABLE CmsSeoRedirects (
+        Id INT IDENTITY(1,1) PRIMARY KEY,
+        OldUrl NVARCHAR(1000) NOT NULL,
+        NewUrl NVARCHAR(1000) NOT NULL,
+        IsPermanent BIT NOT NULL DEFAULT 1,
+        WebsiteId INT NOT NULL,
+        CreatedAt DATETIME2 NOT NULL DEFAULT GETDATE(),
+        UpdatedAt DATETIME2 NOT NULL DEFAULT GETDATE(),
+        IsDeleted BIT NOT NULL DEFAULT 0,
+        CONSTRAINT FK_CmsSeoRedirects_Website FOREIGN KEY (WebsiteId) REFERENCES CmsWebsites(Id)
+    );
+    
+    CREATE INDEX IX_CmsSeoRedirects_OldUrl ON CmsSeoRedirects(OldUrl);
+    CREATE INDEX IX_CmsSeoRedirects_WebsiteId ON CmsSeoRedirects(WebsiteId);
+    CREATE INDEX IX_CmsSeoRedirects_IsDeleted ON CmsSeoRedirects(IsDeleted);
+END
+GO
+
+-- =============================================
+-- 17. 专题表 (CmsTopics)
+-- =============================================
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'CmsTopics')
+BEGIN
+    CREATE TABLE CmsTopics (
+        Id INT IDENTITY(1,1) PRIMARY KEY,
+        Name NVARCHAR(200) NOT NULL,
+        Slug NVARCHAR(200) NULL,
+        CoverImage NVARCHAR(500) NULL,
+        Description NVARCHAR(MAX) NULL,
+        WebsiteId INT NOT NULL,
+        IsEnabled BIT NOT NULL DEFAULT 1,
+        SeoTitle NVARCHAR(200) NULL,
+        SeoDescription NVARCHAR(500) NULL,
+        SeoKeywords NVARCHAR(200) NULL,
+        CreatedAt DATETIME2 NOT NULL DEFAULT GETDATE(),
+        UpdatedAt DATETIME2 NOT NULL DEFAULT GETDATE(),
+        IsDeleted BIT NOT NULL DEFAULT 0,
+        CONSTRAINT FK_CmsTopics_Website FOREIGN KEY (WebsiteId) REFERENCES CmsWebsites(Id)
+    );
+    
+    CREATE INDEX IX_CmsTopics_Slug ON CmsTopics(Slug);
+    CREATE INDEX IX_CmsTopics_WebsiteId ON CmsTopics(WebsiteId);
+    CREATE INDEX IX_CmsTopics_IsEnabled ON CmsTopics(IsEnabled);
+    CREATE INDEX IX_CmsTopics_IsDeleted ON CmsTopics(IsDeleted);
+END
+GO
+
+-- =============================================
+-- 18. 专题文章关联表 (CmsTopicArticles)
+-- =============================================
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'CmsTopicArticles')
+BEGIN
+    CREATE TABLE CmsTopicArticles (
+        Id INT IDENTITY(1,1) PRIMARY KEY,
+        TopicId INT NOT NULL,
+        ArticleId INT NOT NULL,
+        SortOrder INT NOT NULL DEFAULT 0,
+        StartTime DATETIME2 NULL,
+        EndTime DATETIME2 NULL,
+        CreatedAt DATETIME2 NOT NULL DEFAULT GETDATE(),
+        UpdatedAt DATETIME2 NOT NULL DEFAULT GETDATE(),
+        IsDeleted BIT NOT NULL DEFAULT 0,
+        CONSTRAINT FK_CmsTopicArticles_Topic FOREIGN KEY (TopicId) REFERENCES CmsTopics(Id),
+        CONSTRAINT FK_CmsTopicArticles_Article FOREIGN KEY (ArticleId) REFERENCES CmsArticles(Id),
+        CONSTRAINT UQ_CmsTopicArticles_Topic_Article UNIQUE (TopicId, ArticleId)
+    );
+    
+    CREATE INDEX IX_CmsTopicArticles_TopicId ON CmsTopicArticles(TopicId);
+    CREATE INDEX IX_CmsTopicArticles_ArticleId ON CmsTopicArticles(ArticleId);
+    CREATE INDEX IX_CmsTopicArticles_SortOrder ON CmsTopicArticles(SortOrder);
+END
+GO
+
 -- 为超级管理员角色添加所有栏目的权限
 IF NOT EXISTS (SELECT * FROM CmsRoleChannels WHERE RoleId = 1)
 BEGIN

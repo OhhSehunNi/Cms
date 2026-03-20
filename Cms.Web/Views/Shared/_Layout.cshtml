@@ -26,9 +26,9 @@
                     <span class="topbar-text">欢迎您，游客</span>
                     <a href="#" class="topbar-link">登录</a>
                     <a href="#" class="topbar-link">注册</a>
-                    <a href="#" class="topbar-link">微博</a>
-                    <a href="#" class="topbar-link">邮箱</a>
-                    <a href="#" class="topbar-link">网站导航</a>
+                    <a href="#" class="topbar-link"><i class="bi bi-weibo"></i></a>
+                    <a href="#" class="topbar-link"><i class="bi bi-envelope"></i></a>
+                    <a href="#" class="topbar-link"><i class="bi bi-list"></i></a>
                 </div>
             </div>
         </div>
@@ -39,9 +39,8 @@
         <!-- 频道导航条：新闻 / 科技 / 财经等 -->
         <div class="channel-nav">
             <div class="container-xl">
-                @* 这里简单写死一行主频道导航，后续可替换为动态栏目 *@
                 <nav class="channel-nav-inner" aria-label="主频道导航">
-                    <a href="/" class="channel-nav-link">首页</a>
+                    <a href="/" class="channel-nav-link active">首页</a>
                     <a href="/news" class="channel-nav-link">新闻</a>
                     <a href="/tech" class="channel-nav-link">科技</a>
                     <a href="/finance" class="channel-nav-link">财经</a>
@@ -62,7 +61,7 @@
         </div>
     </main>
 
-    <footer class="footer mt-4">
+    <footer class="footer">
         @await Html.PartialAsync("_Footer")
     </footer>
 

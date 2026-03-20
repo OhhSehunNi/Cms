@@ -107,14 +107,14 @@ namespace Cms.Web.Controllers
         private async Task<List<ChannelSectionViewModel>> GetChannelSections(int websiteId)
         {
             // 调用服务获取栏目列表
-            var channels = await _channelService.GetTreeAsync();
+            var channels = await _channelService.GetTreeAsync(websiteId);
             var sections = new List<ChannelSectionViewModel>();
             
             // 遍历每个顶级栏目
             foreach (var channel in channels)
             {
                 // 获取每个栏目的最新文章
-                var articles = await _articleService.GetListAsync(1, 2, null, channel.Id, websiteId);
+                var articles = await _articleService.GetListAsync(1, 2, null, channel.Id);
                 
                 sections.Add(new ChannelSectionViewModel
                 {

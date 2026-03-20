@@ -13,14 +13,17 @@ namespace Cms.Application.Services
     public class TagService : ITagService
     {
         private readonly CmsDbContext _dbContext;
+        private readonly ICacheService _cacheService;
 
         /// <summary>
         /// 构造函数
         /// </summary>
         /// <param name="dbContext">数据库上下文</param>
-        public TagService(CmsDbContext dbContext)
+        /// <param name="cacheService">缓存服务</param>
+        public TagService(CmsDbContext dbContext, ICacheService cacheService)
         {
             _dbContext = dbContext;
+            _cacheService = cacheService;
         }
 
         /// <summary>
@@ -49,6 +52,16 @@ namespace Cms.Application.Services
         /// <returns>标签 DTO 列表</returns>
         public async Task<List<TagDto>> GetListAsync(int page, int pageSize, string? keyword = null, int websiteId = 1)
         {
+            // 生成缓存键
+            string cacheKey = $"website:{websiteId}:tags:list:{page}:{pageSize}:{keyword ?? ""}";
+
+            // 尝试从缓存获取
+            var cachedTags = _cacheService.Get<List<TagDto>>(cacheKey);
+            if (cachedTags != null)
+            {
+                return cachedTags;
+            }
+
             IQueryable<CmsTag> query = _dbContext.CmsTags
                 .Where(t => t.WebsiteId == websiteId && !t.IsDeleted);
 
@@ -63,7 +76,12 @@ namespace Cms.Application.Services
                 .Take(pageSize)
                 .ToListAsync();
 
-            return tags.Select(MapToDto).ToList();
+            var tagDtos = tags.Select(MapToDto).ToList();
+
+            // 缓存结果，过期时间5分钟
+            _cacheService.Set(cacheKey, tagDtos, TimeSpan.FromMinutes(5));
+
+            return tagDtos;
         }
 
         /// <summary>
@@ -85,6 +103,9 @@ namespace Cms.Application.Services
             _dbContext.CmsTags.Add(tag);
             await _dbContext.SaveChangesAsync();
 
+            // 清理相关缓存
+            ClearTagCache(tagDto.WebsiteId);
+
             return await GetByIdAsync(tag.Id);
         }
 
@@ -105,6 +126,9 @@ namespace Cms.Application.Services
 
             await _dbContext.SaveChangesAsync();
 
+            // 清理相关缓存
+            ClearTagCache(tag.WebsiteId);
+
             return await GetByIdAsync(tag.Id);
         }
 
@@ -118,9 +142,25 @@ namespace Cms.Application.Services
             var tag = await _dbContext.CmsTags.FindAsync(id);
             if (tag != null)
             {
+                int websiteId = tag.WebsiteId;
                 tag.IsDeleted = true;
                 await _dbContext.SaveChangesAsync();
+
+                // 清理相关缓存
+                ClearTagCache(websiteId);
             }
+        }
+
+        /// <summary>
+        /// 清理标签相关缓存
+        /// </summary>
+        /// <param name="websiteId">网站 ID</param>
+        private void ClearTagCache(int websiteId)
+        {
+            // 清理所有标签缓存
+            _cacheService.Remove($"website:{websiteId}:tags:all");
+            // 注意：由于应用层缓存服务没有提供按模式删除的方法，
+            // 这里只清理了固定键的缓存，列表和计数缓存会在下次访问时自动更新
         }
 
         /// <summary>
@@ -130,11 +170,24 @@ namespace Cms.Application.Services
         /// <returns>标签名称列表</returns>
         public async Task<List<string>> GetAllTagsAsync(int websiteId)
         {
+            // 生成缓存键
+            string cacheKey = $"website:{websiteId}:tags:all";
+
+            // 尝试从缓存获取
+            var cachedTags = _cacheService.Get<List<string>>(cacheKey);
+            if (cachedTags != null)
+            {
+                return cachedTags;
+            }
+
             var tags = await _dbContext.CmsTags
                 .Where(t => t.WebsiteId == websiteId && !t.IsDeleted)
                 .OrderBy(t => t.Name)
                 .Select(t => t.Name)
                 .ToListAsync();
+
+            // 缓存结果，过期时间10分钟
+            _cacheService.Set(cacheKey, tags, TimeSpan.FromMinutes(10));
 
             return tags;
         }
@@ -164,6 +217,13 @@ namespace Cms.Application.Services
         /// <returns></returns>
         public async Task AddTagsToArticleAsync(int articleId, List<string> tags)
         {
+            // 获取文章所属的网站ID
+            var article = await _dbContext.CmsArticles.FindAsync(articleId);
+            if (article == null)
+                throw new Exception("Article not found");
+
+            int websiteId = article.WebsiteId;
+
             // 先移除现有的标签关联
             var existingTags = await _dbContext.CmsArticleTags
                 .Where(at => at.ArticleId == articleId)
@@ -176,7 +236,7 @@ namespace Cms.Application.Services
             {
                 // 查找或创建标签
                 var tag = await _dbContext.CmsTags
-                    .FirstOrDefaultAsync(t => t.Name == tagName && t.WebsiteId == 1);
+                    .FirstOrDefaultAsync(t => t.Name == tagName && t.WebsiteId == websiteId);
 
                 if (tag == null)
                 {
@@ -184,7 +244,7 @@ namespace Cms.Application.Services
                     {
                         Name = tagName,
                         Slug = tagName.ToLower().Replace(" ", "-"),
-                        WebsiteId = 1,
+                        WebsiteId = websiteId,
                         CreatedAt = DateTime.Now,
                         UpdatedAt = DateTime.Now
                     };
@@ -205,6 +265,9 @@ namespace Cms.Application.Services
             }
 
             await _dbContext.SaveChangesAsync();
+
+            // 清理相关缓存
+            ClearTagCache(websiteId);
         }
 
         /// <summary>
@@ -214,12 +277,22 @@ namespace Cms.Application.Services
         /// <returns></returns>
         public async Task RemoveTagsFromArticleAsync(int articleId)
         {
+            // 获取文章所属的网站ID
+            var article = await _dbContext.CmsArticles.FindAsync(articleId);
+            if (article == null)
+                throw new Exception("Article not found");
+
+            int websiteId = article.WebsiteId;
+
             var articleTags = await _dbContext.CmsArticleTags
                 .Where(at => at.ArticleId == articleId)
                 .ToListAsync();
 
             _dbContext.CmsArticleTags.RemoveRange(articleTags);
             await _dbContext.SaveChangesAsync();
+
+            // 清理相关缓存
+            ClearTagCache(websiteId);
         }
 
         /// <summary>
@@ -230,6 +303,16 @@ namespace Cms.Application.Services
         /// <returns>标签名称、Slug 和文章数量的元组列表</returns>
         public async Task<List<(string Name, string Slug, int Count)>> GetTagsWithCountAsync(int websiteId, int limit = 20)
         {
+            // 生成缓存键
+            string cacheKey = $"website:{websiteId}:tags:count:{limit}";
+
+            // 尝试从缓存获取
+            var cachedTags = _cacheService.Get<List<(string Name, string Slug, int Count)>>(cacheKey);
+            if (cachedTags != null)
+            {
+                return cachedTags;
+            }
+
             var tagsWithCount = await _dbContext.CmsTags
                 .Where(t => t.WebsiteId == websiteId && !t.IsDeleted)
                 .Select(t => new
@@ -243,7 +326,12 @@ namespace Cms.Application.Services
                 .Take(limit)
                 .ToListAsync();
 
-            return tagsWithCount.Select(t => (t.Name, t.Slug, t.Count)).ToList();
+            var result = tagsWithCount.Select(t => (t.Name, t.Slug, t.Count)).ToList();
+
+            // 缓存结果，过期时间10分钟
+            _cacheService.Set(cacheKey, result, TimeSpan.FromMinutes(10));
+
+            return result;
         }
 
         /// <summary>

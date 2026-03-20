@@ -11,11 +11,14 @@ builder.Services.AddDbContext<Cms.Infrastructure.Data.CmsDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // Add cache service
-builder.Services.AddSingleton<Cms.Infrastructure.Services.ICacheService>(new Cms.Infrastructure.Services.RedisCacheService(builder.Configuration.GetConnectionString("Redis")));
+//builder.Services.AddSingleton<Cms.Infrastructure.Services.ICacheService>(new Cms.Infrastructure.Services.RedisCacheService(builder.Configuration.GetConnectionString("Redis")));
 
 // Add application services
 builder.Services.AddScoped<Cms.Application.Services.IArticleService, Cms.Application.Services.ArticleService>();
 builder.Services.AddScoped<Cms.Application.Services.IUserService, Cms.Application.Services.UserService>();
+builder.Services.AddScoped<Cms.Application.Services.ITagService, Cms.Application.Services.TagService>();
+builder.Services.AddScoped<Cms.Application.Services.ICacheService, Cms.Application.Services.CacheService>();
+builder.Services.AddScoped<Cms.Application.Services.IHtmlSanitizerService, Cms.Application.Services.HtmlSanitizerService>();
 
 var app = builder.Build();
 

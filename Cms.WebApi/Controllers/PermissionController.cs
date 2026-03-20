@@ -1,5 +1,6 @@
 using Cms.Application.Services.Dtos;
 using Cms.Application.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Cms.WebApi.Controllers
@@ -10,6 +11,7 @@ namespace Cms.WebApi.Controllers
     /// </summary>
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class PermissionController : ControllerBase
     {
         /// <summary>
@@ -27,22 +29,6 @@ namespace Cms.WebApi.Controllers
         }
 
         /// <summary>
-        /// 根据ID获取权限信息
-        /// </summary>
-        /// <param name="id">权限ID</param>
-        /// <returns>权限信息</returns>
-        [HttpGet("{id}")]
-        public async Task<IActionResult> GetById(int id)
-        {
-            var permission = await _permissionService.GetByIdAsync(id);
-            if (permission == null)
-            {
-                return NotFound();
-            }
-            return Ok(permission);
-        }
-
-        /// <summary>
         /// 获取权限列表
         /// </summary>
         /// <param name="page">页码，默认1</param>
@@ -52,8 +38,51 @@ namespace Cms.WebApi.Controllers
         [HttpGet]
         public async Task<IActionResult> GetList(int page = 1, int pageSize = 10, string? keyword = null)
         {
-            var permissions = await _permissionService.GetListAsync(page, pageSize, keyword);
-            return Ok(permissions);
+            try
+            {
+                var permissions = await _permissionService.GetListAsync(page, pageSize, keyword);
+                var total = await _permissionService.GetCountAsync(keyword);
+
+                return Ok(new
+                {
+                    success = true,
+                    data = new
+                    {
+                        list = permissions,
+                        total = total,
+                        page = page,
+                        pageSize = pageSize
+                    },
+                    message = "获取权限列表成功"
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { success = false, message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// 根据ID获取权限信息
+        /// </summary>
+        /// <param name="id">权限ID</param>
+        /// <returns>权限信息</returns>
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetById(int id)
+        {
+            try
+            {
+                var permission = await _permissionService.GetByIdAsync(id);
+                if (permission == null)
+                {
+                    return NotFound(new { success = false, message = "权限不存在" });
+                }
+                return Ok(new { success = true, data = permission, message = "获取权限信息成功" });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { success = false, message = ex.Message });
+            }
         }
 
         /// <summary>
@@ -62,10 +91,18 @@ namespace Cms.WebApi.Controllers
         /// <param name="permissionDto">权限信息</param>
         /// <returns>创建的权限信息</returns>
         [HttpPost]
+        [Authorize(Roles = "超级管理员")]
         public async Task<IActionResult> Create([FromBody] PermissionDto permissionDto)
         {
-            var permission = await _permissionService.CreateAsync(permissionDto);
-            return CreatedAtAction(nameof(GetById), new { id = permission.Id }, permission);
+            try
+            {
+                var permission = await _permissionService.CreateAsync(permissionDto);
+                return CreatedAtAction(nameof(GetById), new { id = permission.Id }, new { success = true, data = permission, message = "创建权限成功" });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { success = false, message = ex.Message });
+            }
         }
 
         /// <summary>
@@ -75,14 +112,22 @@ namespace Cms.WebApi.Controllers
         /// <param name="permissionDto">权限信息</param>
         /// <returns>更新后的权限信息</returns>
         [HttpPut("{id}")]
+        [Authorize(Roles = "超级管理员")]
         public async Task<IActionResult> Update(int id, [FromBody] PermissionDto permissionDto)
         {
-            if (id != permissionDto.Id)
+            try
             {
-                return BadRequest();
+                if (id != permissionDto.Id)
+                {
+                    return BadRequest(new { success = false, message = "权限ID不匹配" });
+                }
+                var updatedPermission = await _permissionService.UpdateAsync(permissionDto);
+                return Ok(new { success = true, data = updatedPermission, message = "更新权限信息成功" });
             }
-            var updatedPermission = await _permissionService.UpdateAsync(permissionDto);
-            return Ok(updatedPermission);
+            catch (Exception ex)
+            {
+                return BadRequest(new { success = false, message = ex.Message });
+            }
         }
 
         /// <summary>
@@ -91,10 +136,36 @@ namespace Cms.WebApi.Controllers
         /// <param name="id">权限ID</param>
         /// <returns>无内容</returns>
         [HttpDelete("{id}")]
+        [Authorize(Roles = "超级管理员")]
         public async Task<IActionResult> Delete(int id)
         {
-            await _permissionService.DeleteAsync(id);
-            return NoContent();
+            try
+            {
+                await _permissionService.DeleteAsync(id);
+                return Ok(new { success = true, message = "删除权限成功" });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { success = false, message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// 获取权限分类列表
+        /// </summary>
+        /// <returns>权限分类列表</returns>
+        [HttpGet("categories")]
+        public async Task<IActionResult> GetCategories()
+        {
+            try
+            {
+                var categories = await _permissionService.GetCategoriesAsync();
+                return Ok(new { success = true, data = categories, message = "获取权限分类列表成功" });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { success = false, message = ex.Message });
+            }
         }
     }
 }

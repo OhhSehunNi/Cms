@@ -11,14 +11,17 @@ namespace Cms.Application.Services
     public class RecommendService : IRecommendService
     {
         private readonly CmsDbContext _dbContext;
+        private readonly ICacheService _cacheService;
 
         /// <summary>
         /// 构造函数
         /// </summary>
         /// <param name="dbContext">数据库上下文</param>
-        public RecommendService(CmsDbContext dbContext)
+        /// <param name="cacheService">缓存服务</param>
+        public RecommendService(CmsDbContext dbContext, ICacheService cacheService)
         {
             _dbContext = dbContext;
+            _cacheService = cacheService;
         }
 
         /// <summary>
@@ -28,15 +31,22 @@ namespace Cms.Application.Services
         /// <returns>推荐位 DTO</returns>
         public async Task<RecommendSlotDto> GetSlotByIdAsync(int id)
         {
+            string cacheKey = $"recommend:slot:{id}";
+            var cachedSlot = _cacheService.Get<RecommendSlotDto>(cacheKey);
+            if (cachedSlot != null)
+                return cachedSlot;
+
             var slot = await _dbContext.CmsRecommendSlots
                 .Include(s => s.RecommendItems)
                 .ThenInclude(i => i.Article)
-                .FirstOrDefaultAsync(s => s.Id == id);
+                .FirstOrDefaultAsync(s => s.Id == id && !s.IsDeleted);
 
             if (slot == null)
                 return null;
 
-            return MapSlotToDto(slot);
+            var slotDto = MapSlotToDto(slot);
+            _cacheService.Set(cacheKey, slotDto, TimeSpan.FromMinutes(30));
+            return slotDto;
         }
 
         /// <summary>
@@ -46,6 +56,11 @@ namespace Cms.Application.Services
         /// <returns>推荐位 DTO</returns>
         public async Task<RecommendSlotDto> GetSlotByCodeAsync(string code)
         {
+            string cacheKey = $"recommend:slot:code:{code}";
+            var cachedSlot = _cacheService.Get<RecommendSlotDto>(cacheKey);
+            if (cachedSlot != null)
+                return cachedSlot;
+
             var slot = await _dbContext.CmsRecommendSlots
                 .Include(s => s.RecommendItems)
                 .ThenInclude(i => i.Article)
@@ -54,7 +69,9 @@ namespace Cms.Application.Services
             if (slot == null)
                 return null;
 
-            return MapSlotToDto(slot);
+            var slotDto = MapSlotToDto(slot);
+            _cacheService.Set(cacheKey, slotDto, TimeSpan.FromMinutes(30));
+            return slotDto;
         }
 
         /// <summary>
@@ -66,6 +83,11 @@ namespace Cms.Application.Services
         /// <returns>推荐位 DTO 列表</returns>
         public async Task<List<RecommendSlotDto>> GetSlotListAsync(int page, int pageSize, string keyword = null)
         {
+            string cacheKey = $"recommend:slots:list:{page}:{pageSize}:{keyword ?? string.Empty}";
+            var cachedSlots = _cacheService.Get<List<RecommendSlotDto>>(cacheKey);
+            if (cachedSlots != null)
+                return cachedSlots;
+
             var query = _dbContext.CmsRecommendSlots.AsQueryable();
 
             if (!string.IsNullOrEmpty(keyword))
@@ -74,12 +96,15 @@ namespace Cms.Application.Services
             }
 
             var slots = await query
+                .Where(s => !s.IsDeleted)
                 .OrderBy(s => s.SortOrder)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
                 .ToListAsync();
 
-            return slots.Select(MapSlotToDto).ToList();
+            var slotDtos = slots.Select(MapSlotToDto).ToList();
+            _cacheService.Set(cacheKey, slotDtos, TimeSpan.FromMinutes(30));
+            return slotDtos;
         }
 
         /// <summary>
@@ -96,6 +121,9 @@ namespace Cms.Application.Services
             _dbContext.CmsRecommendSlots.Add(slot);
             await _dbContext.SaveChangesAsync();
 
+            // 清理缓存
+            await ClearRecommendCacheAsync();
+
             return await GetSlotByIdAsync(slot.Id);
         }
 
@@ -107,13 +135,20 @@ namespace Cms.Application.Services
         public async Task<RecommendSlotDto> UpdateSlotAsync(RecommendSlotDto slotDto)
         {
             var slot = await _dbContext.CmsRecommendSlots.FindAsync(slotDto.Id);
-            if (slot == null)
+            if (slot == null || slot.IsDeleted)
                 throw new Exception("RecommendSlot not found");
 
+            string oldCode = slot.Code;
             UpdateSlotEntityFromDto(slot, slotDto);
             slot.UpdatedAt = DateTime.Now;
 
             await _dbContext.SaveChangesAsync();
+
+            // 清理缓存
+            await ClearRecommendCacheAsync();
+            _cacheService.Remove($"recommend:slot:{slot.Id}");
+            _cacheService.Remove($"recommend:slot:code:{oldCode}");
+            _cacheService.Remove($"recommend:slot:code:{slot.Code}");
 
             return await GetSlotByIdAsync(slot.Id);
         }
@@ -128,8 +163,14 @@ namespace Cms.Application.Services
             var slot = await _dbContext.CmsRecommendSlots.FindAsync(id);
             if (slot != null)
             {
+                string code = slot.Code;
                 slot.IsDeleted = true;
                 await _dbContext.SaveChangesAsync();
+
+                // 清理缓存
+                await ClearRecommendCacheAsync();
+                _cacheService.Remove($"recommend:slot:{id}");
+                _cacheService.Remove($"recommend:slot:code:{code}");
             }
         }
 
@@ -146,6 +187,16 @@ namespace Cms.Application.Services
 
             _dbContext.CmsRecommendItems.Add(item);
             await _dbContext.SaveChangesAsync();
+
+            // 清理缓存
+            var slot = await _dbContext.CmsRecommendSlots.FindAsync(item.SlotId);
+            if (slot != null)
+            {
+                await ClearRecommendCacheAsync();
+                _cacheService.Remove($"recommend:slot:{item.SlotId}");
+                _cacheService.Remove($"recommend:slot:code:{slot.Code}");
+                _cacheService.Remove($"recommend:articles:{slot.Code}:*");
+            }
 
             return await GetItemByIdAsync(item.Id);
         }
@@ -166,6 +217,16 @@ namespace Cms.Application.Services
 
             await _dbContext.SaveChangesAsync();
 
+            // 清理缓存
+            var slot = await _dbContext.CmsRecommendSlots.FindAsync(item.SlotId);
+            if (slot != null)
+            {
+                await ClearRecommendCacheAsync();
+                _cacheService.Remove($"recommend:slot:{item.SlotId}");
+                _cacheService.Remove($"recommend:slot:code:{slot.Code}");
+                _cacheService.Remove($"recommend:articles:{slot.Code}:*");
+            }
+
             return await GetItemByIdAsync(item.Id);
         }
 
@@ -179,8 +240,20 @@ namespace Cms.Application.Services
             var item = await _dbContext.CmsRecommendItems.FindAsync(id);
             if (item != null)
             {
+                int slotId = item.SlotId;
+                var slot = await _dbContext.CmsRecommendSlots.FindAsync(slotId);
+                
                 item.IsDeleted = true;
                 await _dbContext.SaveChangesAsync();
+
+                // 清理缓存
+                if (slot != null)
+                {
+                    await ClearRecommendCacheAsync();
+                    _cacheService.Remove($"recommend:slot:{slotId}");
+                    _cacheService.Remove($"recommend:slot:code:{slot.Code}");
+                    _cacheService.Remove($"recommend:articles:{slot.Code}:*");
+                }
             }
         }
 
@@ -192,6 +265,11 @@ namespace Cms.Application.Services
         /// <returns>文章 DTO 列表</returns>
         public async Task<List<ArticleDto>> GetRecommendArticlesAsync(string code, int count = 10)
         {
+            string cacheKey = $"recommend:articles:{code}:{count}";
+            var cachedArticles = _cacheService.Get<List<ArticleDto>>(cacheKey);
+            if (cachedArticles != null)
+                return cachedArticles;
+
             var slot = await _dbContext.CmsRecommendSlots
                 .Include(s => s.RecommendItems)
                 .ThenInclude(i => i.Article)
@@ -209,7 +287,9 @@ namespace Cms.Application.Services
                 .Select(i => i.Article)
                 .ToList();
 
-            return items.Select(MapArticleToDto).ToList();
+            var articleDtos = items.Select(MapArticleToDto).ToList();
+            _cacheService.Set(cacheKey, articleDtos, TimeSpan.FromMinutes(30));
+            return articleDtos;
         }
 
         /// <summary>
@@ -221,7 +301,7 @@ namespace Cms.Application.Services
         {
             var item = await _dbContext.CmsRecommendItems
                 .Include(i => i.Article)
-                .FirstOrDefaultAsync(i => i.Id == id);
+                .FirstOrDefaultAsync(i => i.Id == id && !i.IsDeleted);
 
             if (item == null)
                 return null;
@@ -244,7 +324,7 @@ namespace Cms.Application.Services
                 Type = slot.Type,
                 SortOrder = slot.SortOrder,
                 IsEnabled = slot.IsEnabled,
-                RecommendItems = slot.RecommendItems.Select(MapItemToDto).ToList()
+                RecommendItems = slot.RecommendItems.Where(i => !i.IsDeleted).Select(MapItemToDto).ToList()
             };
         }
 
@@ -361,6 +441,16 @@ namespace Cms.Application.Services
                 Slug = article.Slug,
                 ViewCount = article.ViewCount
             };
+        }
+
+        /// <summary>
+        /// 清理推荐位相关的缓存
+        /// </summary>
+        /// <returns></returns>
+        private async Task ClearRecommendCacheAsync()
+        {
+            // 清理推荐位列表缓存
+            _cacheService.Remove($"recommend:slots:list:*");
         }
     }
 }

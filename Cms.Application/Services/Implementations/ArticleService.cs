@@ -2,6 +2,7 @@ using Cms.Application.Services.Dtos;
 using Cms.Domain.Entities;
 using Cms.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 
 namespace Cms.Application.Services
 {
@@ -11,14 +12,23 @@ namespace Cms.Application.Services
     public class ArticleService : IArticleService
     {
         private readonly CmsDbContext _dbContext;
+        private readonly IHtmlSanitizerService _htmlSanitizerService;
+        private readonly ICacheService _cacheService;
+        private readonly ArticleDapperService _articleDapperService;
 
         /// <summary>
         /// 构造函数
         /// </summary>
         /// <param name="dbContext">数据库上下文</param>
-        public ArticleService(CmsDbContext dbContext)
+        /// <param name="htmlSanitizerService">HTML 清洗服务</param>
+        /// <param name="cacheService">缓存服务</param>
+        /// <param name="configuration">配置对象</param>
+        public ArticleService(CmsDbContext dbContext, IHtmlSanitizerService htmlSanitizerService, ICacheService cacheService, IConfiguration configuration)
         {
             _dbContext = dbContext;
+            _htmlSanitizerService = htmlSanitizerService;
+            _cacheService = cacheService;
+            _articleDapperService = new ArticleDapperService(configuration);
         }
 
         /// <summary>
@@ -28,6 +38,12 @@ namespace Cms.Application.Services
         /// <returns>文章 DTO</returns>
         public async Task<ArticleDto> GetByIdAsync(int id)
         {
+            // 尝试从缓存获取
+            string cacheKey = $"website:1:article:{id}";
+            var cachedArticle = _cacheService.Get<ArticleDto>(cacheKey);
+            if (cachedArticle != null)
+                return cachedArticle;
+
             var article = await _dbContext.CmsArticles
                 .Include(a => a.Channel)
                 .Include(a => a.Content)
@@ -37,7 +53,12 @@ namespace Cms.Application.Services
             if (article == null)
                 return null;
 
-            return MapToDto(article);
+            var articleDto = MapToDto(article);
+
+            // 缓存文章详情
+            _cacheService.Set(cacheKey, articleDto, TimeSpan.FromHours(1));
+
+            return articleDto;
         }
 
         /// <summary>
@@ -47,33 +68,28 @@ namespace Cms.Application.Services
         /// <param name="pageSize">每页大小</param>
         /// <param name="keyword">关键词</param>
         /// <param name="channelId">栏目 ID</param>
+        /// <param name="status">状态</param>
+        /// <param name="startDate">开始日期</param>
+        /// <param name="endDate">结束日期</param>
+        /// <param name="isTop">是否置顶</param>
+        /// <param name="isRecommended">是否推荐</param>
         /// <param name="websiteId">网站 ID</param>
         /// <returns>文章 DTO 列表</returns>
-        public async Task<List<ArticleDto>> GetListAsync(int page, int pageSize, string keyword = null, int? channelId = null, int websiteId = 1)
+        public async Task<List<ArticleDto>> GetListAsync(int page, int pageSize, string? keyword = null, int? channelId = null, string? status = null, DateTime? startDate = null, DateTime? endDate = null, bool? isTop = null, bool? isRecommended = null, int websiteId = 1)
         {
-            IQueryable<CmsArticle> query = _dbContext.CmsArticles
-                .Include(a => a.Channel)
-                .Include(a => a.ArticleTags).ThenInclude(at => at.Tag)
-                .Where(a => a.WebsiteId == websiteId);
+            // 尝试从缓存获取
+            string cacheKey = $"website:{websiteId}:channel:{channelId ?? 0}:status:{status ?? string.Empty}:start:{startDate?.ToString("yyyy-MM-dd") ?? string.Empty}:end:{endDate?.ToString("yyyy-MM-dd") ?? string.Empty}:top:{isTop ?? false}:recommended:{isRecommended ?? false}:list:{page}:{pageSize}:{keyword ?? string.Empty}";
+            var cachedList = _cacheService.Get<List<ArticleDto>>(cacheKey);
+            if (cachedList != null)
+                return cachedList;
 
-            if (!string.IsNullOrEmpty(keyword))
-            {
-                query = query.Where(a => a.Title.Contains(keyword) || a.Summary.Contains(keyword));
-            }
+            // 使用 Dapper 进行高性能查询
+            var articles = await _articleDapperService.GetListAsync(page, pageSize, keyword, channelId, status, startDate, endDate, isTop, isRecommended, websiteId);
 
-            if (channelId.HasValue)
-            {
-                query = query.Where(a => a.ChannelId == channelId.Value);
-            }
+            // 缓存文章列表
+            _cacheService.Set(cacheKey, articles, TimeSpan.FromMinutes(30));
 
-            var articles = await query
-                .OrderByDescending(a => a.IsTop)
-                .ThenByDescending(a => a.PublishTime)
-                .Skip((page - 1) * pageSize)
-                .Take(pageSize)
-                .ToListAsync();
-
-            return articles.Select(MapToDto).ToList();
+            return articles;
         }
 
         /// <summary>
@@ -83,13 +99,22 @@ namespace Cms.Application.Services
         /// <returns>创建后的文章 DTO</returns>
         public async Task<ArticleDto> CreateAsync(ArticleDto articleDto)
         {
+            // 处理富文本内容
+            var sanitizedHtml = _htmlSanitizerService.SanitizeHtml(articleDto.HtmlContent);
+            var plainText = _htmlSanitizerService.ExtractPlainText(sanitizedHtml);
+            var wordCount = _htmlSanitizerService.CalculateWordCount(sanitizedHtml);
+
             var article = MapToEntity(articleDto);
-            article.Status = "Draft";
-            article.CreatedAt = DateTime.Now;
-            article.UpdatedAt = DateTime.Now;
+            article.Create();
+            article.Content.HtmlContent = sanitizedHtml;
+            article.Content.TextContent = plainText;
+            article.Content.WordCount = wordCount;
 
             _dbContext.CmsArticles.Add(article);
             await _dbContext.SaveChangesAsync();
+
+            // 清除相关缓存
+            ClearArticleCache(article.WebsiteId, article.ChannelId);
 
             return await GetByIdAsync(article.Id);
         }
@@ -107,12 +132,24 @@ namespace Cms.Application.Services
                 .FirstOrDefaultAsync(a => a.Id == articleDto.Id);
 
             if (article == null)
-                throw new Exception("Article not found");
+                throw new Exception("文章不存在");
+
+            // 处理富文本内容
+            var sanitizedHtml = _htmlSanitizerService.SanitizeHtml(articleDto.HtmlContent);
+            var plainText = _htmlSanitizerService.ExtractPlainText(sanitizedHtml);
+            var wordCount = _htmlSanitizerService.CalculateWordCount(sanitizedHtml);
 
             UpdateEntityFromDto(article, articleDto);
-            article.UpdatedAt = DateTime.Now;
+            article.Update();
+            article.Content.HtmlContent = sanitizedHtml;
+            article.Content.TextContent = plainText;
+            article.Content.WordCount = wordCount;
 
             await _dbContext.SaveChangesAsync();
+
+            // 清除相关缓存
+            ClearArticleCache(article.WebsiteId, article.ChannelId);
+            _cacheService.Remove($"website:{article.WebsiteId}:article:{article.Id}");
 
             return await GetByIdAsync(article.Id);
         }
@@ -124,12 +161,19 @@ namespace Cms.Application.Services
         /// <returns></returns>
         public async Task DeleteAsync(int id)
         {
-            var article = await _dbContext.CmsArticles.FindAsync(id);
-            if (article != null)
-            {
-                article.IsDeleted = true;
-                await _dbContext.SaveChangesAsync();
-            }
+            var article = await _dbContext.CmsArticles
+                .Include(a => a.Channel)
+                .FirstOrDefaultAsync(a => a.Id == id);
+
+            if (article == null)
+                throw new Exception("文章不存在");
+
+            article.Delete();
+            await _dbContext.SaveChangesAsync();
+
+            // 清除相关缓存
+            ClearArticleCache(article.WebsiteId, article.ChannelId);
+            _cacheService.Remove($"website:{article.WebsiteId}:article:{article.Id}");
         }
 
         /// <summary>
@@ -137,30 +181,56 @@ namespace Cms.Application.Services
         /// </summary>
         /// <param name="id">文章 ID</param>
         /// <returns></returns>
-        public async Task PublishAsync(int id)
+        public async Task<ArticleDto> PublishAsync(int id)
         {
-            var article = await _dbContext.CmsArticles.FindAsync(id);
-            if (article != null)
-            {
-                article.Status = "Published";
-                article.PublishTime = DateTime.Now;
-                await _dbContext.SaveChangesAsync();
-            }
+            var article = await _dbContext.CmsArticles
+                .Include(a => a.Content)
+                .Include(a => a.Channel)
+                .FirstOrDefaultAsync(a => a.Id == id);
+
+            if (article == null)
+                throw new Exception("文章不存在");
+
+            // 检查栏目是否启用
+            if (!article.Channel.IsEnabled)
+                throw new Exception("栏目已禁用，无法发布文章");
+
+            // 检查是否有正文
+            if (!article.CanPublish())
+                throw new Exception("正文不能为空");
+
+            article.Publish();
+            await _dbContext.SaveChangesAsync();
+
+            // 清除相关缓存
+            ClearArticleCache(article.WebsiteId, article.ChannelId);
+            _cacheService.Remove($"website:{article.WebsiteId}:article:{article.Id}");
+
+            return await GetByIdAsync(article.Id);
         }
 
         /// <summary>
-        /// 取消发布文章
+        /// 下线文章
         /// </summary>
         /// <param name="id">文章 ID</param>
         /// <returns></returns>
-        public async Task UnpublishAsync(int id)
+        public async Task<ArticleDto> OfflineAsync(int id)
         {
-            var article = await _dbContext.CmsArticles.FindAsync(id);
-            if (article != null)
-            {
-                article.Status = "Unpublished";
-                await _dbContext.SaveChangesAsync();
-            }
+            var article = await _dbContext.CmsArticles
+                .Include(a => a.Channel)
+                .FirstOrDefaultAsync(a => a.Id == id);
+
+            if (article == null)
+                throw new Exception("文章不存在");
+
+            article.Offline();
+            await _dbContext.SaveChangesAsync();
+
+            // 清除相关缓存
+            ClearArticleCache(article.WebsiteId, article.ChannelId);
+            _cacheService.Remove($"website:{article.WebsiteId}:article:{article.Id}");
+
+            return await GetByIdAsync(article.Id);
         }
 
         /// <summary>
@@ -175,6 +245,9 @@ namespace Cms.Application.Services
             {
                 article.ViewCount++;
                 await _dbContext.SaveChangesAsync();
+
+                // 清除缓存
+                _cacheService.Remove($"website:{article.WebsiteId}:article:{article.Id}");
             }
         }
 
@@ -186,15 +259,24 @@ namespace Cms.Application.Services
         /// <returns>文章 DTO 列表</returns>
         public async Task<List<ArticleDto>> GetHeadlineArticlesAsync(int websiteId, int limit = 5)
         {
+            string cacheKey = $"website:{websiteId}:headline:{limit}";
+            var cachedArticles = _cacheService.Get<List<ArticleDto>>(cacheKey);
+            if (cachedArticles != null)
+                return cachedArticles;
+
             var articles = await _dbContext.CmsArticles
                 .Include(a => a.Channel)
-                .Where(a => a.WebsiteId == websiteId && a.IsHeadline && a.Status == "Published")
+                .Where(a => a.WebsiteId == websiteId && a.IsHeadline && a.Status == ArticleStatus.Published && !a.IsDeleted)
                 .OrderByDescending(a => a.SortOrder)
                 .ThenByDescending(a => a.PublishTime)
                 .Take(limit)
                 .ToListAsync();
 
-            return articles.Select(MapToDto).ToList();
+            var articleDtos = articles.Select(MapToDto).ToList();
+
+            _cacheService.Set(cacheKey, articleDtos, TimeSpan.FromMinutes(30));
+
+            return articleDtos;
         }
 
         /// <summary>
@@ -205,15 +287,41 @@ namespace Cms.Application.Services
         /// <returns>文章 DTO 列表</returns>
         public async Task<List<ArticleDto>> GetHotArticlesAsync(int websiteId, int limit = 10)
         {
+            string cacheKey = $"website:{websiteId}:hot:{limit}";
+            var cachedArticles = _cacheService.Get<List<ArticleDto>>(cacheKey);
+            if (cachedArticles != null)
+                return cachedArticles;
+
             var articles = await _dbContext.CmsArticles
                 .Include(a => a.Channel)
-                .Where(a => a.WebsiteId == websiteId && a.Status == "Published")
+                .Where(a => a.WebsiteId == websiteId && a.Status == ArticleStatus.Published && !a.IsDeleted)
                 .OrderByDescending(a => a.ViewCount)
                 .ThenByDescending(a => a.PublishTime)
                 .Take(limit)
                 .ToListAsync();
 
-            return articles.Select(MapToDto).ToList();
+            var articleDtos = articles.Select(MapToDto).ToList();
+
+            _cacheService.Set(cacheKey, articleDtos, TimeSpan.FromMinutes(30));
+
+            return articleDtos;
+        }
+
+        /// <summary>
+        /// 清除文章相关缓存
+        /// </summary>
+        /// <param name="websiteId">网站 ID</param>
+        /// <param name="channelId">栏目 ID</param>
+        private void ClearArticleCache(int websiteId, int channelId)
+        {
+            // 清除栏目列表缓存
+            _cacheService.Remove($"website:{websiteId}:channel:{channelId}:list:*");
+            // 清除首页缓存
+            _cacheService.Remove($"website:{websiteId}:home");
+            // 清除头条缓存
+            _cacheService.Remove($"website:{websiteId}:headline:*");
+            // 清除热门文章缓存
+            _cacheService.Remove($"website:{websiteId}:hot:*");
         }
 
         /// <summary>
@@ -285,7 +393,8 @@ namespace Cms.Application.Services
                 Content = new CmsArticleContent
                 {
                     HtmlContent = articleDto.HtmlContent,
-                    TextContent = articleDto.TextContent
+                    TextContent = articleDto.TextContent,
+                    WordCount = 0
                 }
             };
 

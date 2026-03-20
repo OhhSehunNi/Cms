@@ -1,27 +1,33 @@
-<header class="header">
-    <div class="container">
-        <div class="row py-3">
-            <div class="col-md-3">
+<header class="header-main">
+    <div class="container-xl">
+        <div class="header-content">
+            <div class="header-left">
                 <a asp-controller="Home" asp-action="Index" class="navbar-brand">
-                    @ViewBag.WebsiteName
+                    <div class="logo">
+                        <span class="logo-text">@ViewBag.WebsiteName</span>
+                    </div>
                 </a>
             </div>
-            <div class="col-md-9">
-                <div class="d-flex justify-content-md-end">
-                    <form asp-controller="Search" asp-action="Index" class="search-form d-flex gap-2">
-                        <input type="text" name="keyword" placeholder="搜索新闻" class="form-control" />
-                        <button type="submit" class="btn btn-primary">搜索</button>
-                    </form>
+            <div class="header-center">
+                <form asp-controller="Search" asp-action="Index" class="search-form">
+                    <div class="search-input-wrapper">
+                        <input type="text" name="keyword" placeholder="搜索新闻、资讯、话题" class="search-input" />
+                        <button type="submit" class="search-button">
+                            <i class="bi bi-search"></i>
+                        </button>
+                    </div>
+                </form>
+            </div>
+            <div class="header-right">
+                <div class="header-actions">
+                    <a href="#" class="header-action-link" title="消息">
+                        <i class="bi bi-bell"></i>
+                    </a>
+                    <a href="#" class="header-action-link" title="收藏">
+                        <i class="bi bi-star"></i>
+                    </a>
                 </div>
             </div>
         </div>
-        <nav class="navbar navbar-expand-lg navbar-light">
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                @await Component.InvokeAsync("Navigation")
-            </div>
-        </nav>
     </div>
 </header>
